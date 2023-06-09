@@ -16,74 +16,86 @@ library(tidyverse)
 
 ```{r}
 #cargamos los datos con las variables que nos interesan
-df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/alimentos.csv', sep=','))
+df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/ProyectoVeganos/alimentos.csv', sep=','))
+
+
+df_seitan <- subset(df, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
+
+#Revisar que hay muchos productos que no son soja texturizada
+
+df_soja <- subset(df, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
+
+df_tofu <- subset(df, grepl("tofu", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "tofu"
+
+
+
 ```
 
 
 ```{r}
-df_filtro <- df[,c('CREATOR','PRODUCT_NAME','FAT_100G','CARBOHYDRATES_100G','SUGARS_100G','PROTEINS_100G')]
-df_filtro$FAT_100G <- as.numeric(df_filtro$FAT_100G)
-df_filtro$CARBOHYDRATES_100G <- as.numeric(df_filtro$CARBOHYDRATES_100G)
-df_filtro$SUGARS_100G <- as.numeric(df_filtro$SUGARS_100G)
-df_filtro$PROTEINS_100G <- as.numeric(df_filtro$PROTEINS_100G)
+df_seitan <- df_seitan[,c('CREATOR','PRODUCT_NAME','FAT_100G','CARBOHYDRATES_100G','SUGARS_100G','PROTEINS_100G')]
+df_seitan$FAT_100G <- as.numeric(df_seitan$FAT_100G)
+df_seitan$CARBOHYDRATES_100G <- as.numeric(df_seitan$CARBOHYDRATES_100G)
+df_seitan$SUGARS_100G <- as.numeric(df_seitan$SUGARS_100G)
+df_seitan$PROTEINS_100G <- as.numeric(df_seitan$PROTEINS_100G)
 
-summary(df_filtro)
+summary(df_seitan)
 ```
 
 ```{r}
-df_filtro1 <- df_filtro %>%
+df_seitan <- df_seitan %>%
   group_by(CREATOR) %>%
   mutate(FAT_100G = ifelse(is.na(FAT_100G), mean(FAT_100G, na.rm = TRUE), FAT_100G),
          CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), mean(CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
          SUGARS_100G = ifelse(is.na(SUGARS_100G), mean(SUGARS_100G, na.rm = TRUE), SUGARS_100G),
          PROTEINS_100G = ifelse(is.na(PROTEINS_100G), mean(PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
          )
-summary(df_filtro1)
+summary(df_seitan)
 
 ```
 ```{r}
-hist(df_filtro1$FAT_100G, main = "Histograma de frecuencias FAT_100G", # Frecuencia
+hist(df_seitan$FAT_100G, main = "Histograma de frecuencias FAT_100G", # Frecuencia
      ylab = "Frecuencia")
-hist(df_filtro1$CARBOHYDRATES_100G, main = "Histograma de frecuencias CARBOHYDRATES_100G", # Frecuencia
+hist(df_seitan$CARBOHYDRATES_100G, main = "Histograma de frecuencias CARBOHYDRATES_100G", # Frecuencia
      ylab = "Frecuencia")
-hist(df_filtro1$SUGARS_100G, main = "Histograma de frecuencias SUGARS_100G", # Frecuencia
+hist(df_seitan$SUGARS_100G, main = "Histograma de frecuencias SUGARS_100G", # Frecuencia
      ylab = "Frecuencia")
-hist(df_filtro1$PROTEINS_100G, main = "Histograma de frecuencias PROTEINS_100G", # Frecuencia
+hist(df_seitan$PROTEINS_100G, main = "Histograma de frecuencias PROTEINS_100G", # Frecuencia
      ylab = "Frecuencia")
 ```
 
 
 ```{r}
-df_clean <- na.omit(df_filtro1)
-df_clean$CREATOR_PRODNAME <- paste(df_clean$CREATOR,'--', df_clean$PRODUCT_NAME)
-df_clean <- df_clean[,3:7]
-df_clean <- subset(df_clean, !duplicated(CREATOR_PRODNAME))
+df_seitan <- na.omit(df_seitan)
+df_seitan$CREATOR_PRODNAME <- paste(df_seitan$CREATOR,'--', df_seitan$PRODUCT_NAME)
+df_seitan <- df_seitan[,3:7]
+df_seitan <- subset(df_seitan, !duplicated(CREATOR_PRODNAME))
 
-df_clean <- data.frame(
-  row.names = paste(df_clean$CREATOR_PRODNAME),
-  df_clean[, c("FAT_100G", "CARBOHYDRATES_100G", "SUGARS_100G", "PROTEINS_100G")]
+df_seitan <- data.frame(
+  row.names = paste(df_seitan$CREATOR_PRODNAME),
+  df_seitan[, c("FAT_100G", "CARBOHYDRATES_100G", "SUGARS_100G", "PROTEINS_100G")]
 )
-df_clean <- scale(df_clean)
+df_seitan <- scale(df_seitan)
 ```
 
 ```{r}
 # total de cluster óptimos
-elbow <- fviz_nbclust(x = df_clean, kmeans, method = "wss")
+elbow <- fviz_nbclust(x = df_seitan, kmeans, method = "wss")
 print(elbow)
 ```
 ```{r}
 set.seed(123)
-km_clusters <- kmeans(x=df_clean,centers=3,nstart=25)
+km_clusters <- kmeans(x=df_seitan,centers=3,nstart=25)
 
 
-fviz_cluster(object=km_clusters,data=df_clean,show.clust.cent = TRUE,
+fviz_cluster(object=km_clusters,data=df_seitan,show.clust.cent = TRUE,
              ellipse.type="euclid",star.plot=TRUE,repel=TRUE) +
   labs(title ="Resultados clustering K-means") +
   theme_bw() +
   theme(legend.position = "none")
 ```
 ```{r}
-datos<-scale(df_clean)
+datos<-scale(df_seitan)
 set.seed(101)
 heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
                     method = "complete")
