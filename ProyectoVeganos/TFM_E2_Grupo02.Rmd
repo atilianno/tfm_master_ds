@@ -41,24 +41,32 @@ df_seitan$SUGARS_100G <- as.numeric(df_seitan$SUGARS_100G)
 df_seitan$PROTEINS_100G <- as.numeric(df_seitan$PROTEINS_100G)
 
 summary(df_seitan)
+```
 
+```{r}
+#Elimino los faltantes
+df_seitan <- df_seitan[complete.cases(df_seitan), ]
+```
+
+
+```{r}
 #reemplazo por la mediana los faltantes
-df_seitan <- df_seitan %>%
-  group_by(CREATOR) %>%
-  mutate(FAT_100G = ifelse(is.na(FAT_100G), median(FAT_100G, na.rm = TRUE), FAT_100G),
-         CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
-         SUGARS_100G = ifelse(is.na(SUGARS_100G), median(SUGARS_100G, na.rm = TRUE), SUGARS_100G),
-         PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
-         )
-summary(df_seitan)
-
-df_seitan <- df_seitan %>%
-  mutate(FAT_100G = ifelse(is.na(FAT_100G), median(df_seitan$FAT_100G, na.rm = TRUE), FAT_100G),
-         CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(df_seitan$CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
-         SUGARS_100G = ifelse(is.na(SUGARS_100G), median(df_seitan$SUGARS_100G, na.rm = TRUE), SUGARS_100G),
-         PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(df_seitan$PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
-  )
-summary(df_seitan)
+# df_seitan <- df_seitan %>%
+#   group_by(CREATOR) %>%
+#   mutate(FAT_100G = ifelse(is.na(FAT_100G), median(FAT_100G, na.rm = TRUE), FAT_100G),
+#          CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
+#          SUGARS_100G = ifelse(is.na(SUGARS_100G), median(SUGARS_100G, na.rm = TRUE), SUGARS_100G),
+#          PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
+#          )
+# summary(df_seitan)
+# 
+# df_seitan <- df_seitan %>%
+#   mutate(FAT_100G = ifelse(is.na(FAT_100G), median(df_seitan$FAT_100G, na.rm = TRUE), FAT_100G),
+#          CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(df_seitan$CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
+#          SUGARS_100G = ifelse(is.na(SUGARS_100G), median(df_seitan$SUGARS_100G, na.rm = TRUE), SUGARS_100G),
+#          PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(df_seitan$PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
+#   )
+# summary(df_seitan)
 ```
 
 ```{r}
@@ -93,7 +101,7 @@ print(elbow)
 ```
 ```{r}
 set.seed(123)
-km_clusters <- kmeans(x=df_seitan,centers=3,nstart=25)
+km_clusters <- kmeans(x=df_seitan,centers=6,nstart=25)
 
 
 fviz_cluster(object=km_clusters,data=df_seitan,show.clust.cent = TRUE,
@@ -125,26 +133,37 @@ df_tofu$SUGARS_100G <- as.numeric(df_tofu$SUGARS_100G)
 df_tofu$PROTEINS_100G <- as.numeric(df_tofu$PROTEINS_100G)
 
 summary(df_tofu)
+```
 
+
+```{r}
 #reemplazo por la mediana los faltantes
-df_tofu <- df_tofu %>%
-  group_by(CREATOR) %>%
-  mutate(FAT_100G = ifelse(is.na(FAT_100G), median(FAT_100G, na.rm = TRUE), FAT_100G),
-         CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
-         SUGARS_100G = ifelse(is.na(SUGARS_100G), median(SUGARS_100G, na.rm = TRUE), SUGARS_100G),
-         PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
-         )
-summary(df_tofu)
-
-df_tofu <- df_tofu %>%
-  mutate(FAT_100G = ifelse(is.na(FAT_100G), median(df_tofu$FAT_100G, na.rm = TRUE), FAT_100G),
-         CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(df_tofu$CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
-         SUGARS_100G = ifelse(is.na(SUGARS_100G), median(df_tofu$SUGARS_100G, na.rm = TRUE), SUGARS_100G),
-         PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(df_tofu$PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
-  )
-summary(df_tofu)
+# df_tofu <- df_tofu %>%
+#   group_by(CREATOR) %>%
+#   mutate(FAT_100G = ifelse(is.na(FAT_100G), median(FAT_100G, na.rm = TRUE), FAT_100G),
+#          CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
+#          SUGARS_100G = ifelse(is.na(SUGARS_100G), median(SUGARS_100G, na.rm = TRUE), SUGARS_100G),
+#          PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
+#          )
+# summary(df_tofu)
+# 
+# df_tofu <- df_tofu %>%
+#   mutate(FAT_100G = ifelse(is.na(FAT_100G), median(df_tofu$FAT_100G, na.rm = TRUE), FAT_100G),
+#          CARBOHYDRATES_100G = ifelse(is.na(CARBOHYDRATES_100G), median(df_tofu$CARBOHYDRATES_100G, na.rm = TRUE), CARBOHYDRATES_100G),
+#          SUGARS_100G = ifelse(is.na(SUGARS_100G), median(df_tofu$SUGARS_100G, na.rm = TRUE), SUGARS_100G),
+#          PROTEINS_100G = ifelse(is.na(PROTEINS_100G), median(df_tofu$PROTEINS_100G, na.rm = TRUE), PROTEINS_100G)
+#   )
+# summary(df_tofu)
 
 ```
+
+```{r}
+#Elimino los faltantes
+df_tofu <- df_tofu[complete.cases(df_tofu), ]
+```
+
+
+
 ```{r}
 hist(df_tofu$FAT_100G, main = "Histograma de frecuencias FAT_100G", # Frecuencia
      ylab = "Frecuencia")
@@ -189,7 +208,7 @@ print(elbow)
 ```
 ```{r}
 set.seed(123)
-km_clusters <- kmeans(x=df_tofu,centers=3,nstart=25)
+km_clusters <- kmeans(x=df_tofu,centers=7,nstart=25)
 
 
 fviz_cluster(object=km_clusters,data=df_tofu,show.clust.cent = TRUE,
@@ -198,6 +217,7 @@ fviz_cluster(object=km_clusters,data=df_tofu,show.clust.cent = TRUE,
   theme_bw() +
   theme(legend.position = "none")
 ```
+
 ```{r}
 datos<-scale(df_tofu)
 set.seed(101)
