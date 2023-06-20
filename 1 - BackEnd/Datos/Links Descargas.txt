@@ -1,0 +1,5 @@
+################################################################################
+# Base de Datos Open Food Facts
+################################################################################
+
+https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv
