@@ -17,18 +17,92 @@ library(ggcorrplot)
 
 ```{r}
 #cargamos los datos con las variables que nos interesan
-df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/ProyectoVeganos/alimentos.csv', sep=','))
+df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v1.csv', sep=','))
+```
 
 
+```{r}
+#filtros negativos
+# Crear un vector con las palabras a buscar
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","GALLETAS","CHOCOLAT","SPAGHETTI","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA", "GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE")
 
+# Crear una función que verifica si alguna de las palabras está presente en el texto
+verificar_palabras <- function(texto, palabras) {
+  sapply(palabras, function(palabra) grepl(palabra, texto))
+}
+
+# Identificar las filas que contienen alguna de las palabras a eliminar
+filas_a_eliminar <- apply(df, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
+
+
+# Eliminar las filas identificadas del dataframe original
+df_nuevo <- df[!filas_a_eliminar, ]
+	
+filas_a_eliminar <- apply(df_nuevo, 1, function(row) any(verificar_palabras(row["QUANTITY"], palabras_a_eliminar)))
+df_nuevo <- df_nuevo[!filas_a_eliminar, ]
+```
+
+
+```{r}
 #Revisar que hay muchos productos que no son soja texturizada
 
-df_soja <- subset(df, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
+df_soja <- subset(df_nuevo, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
 
 
+df_soja <- df_soja[,c('CREATOR','PRODUCT_NAME','FAT_100G','CARBOHYDRATES_100G','SUGARS_100G','PROTEINS_100G')]
+df_soja$FAT_100G <- as.numeric(df_soja$FAT_100G)
+df_soja$CARBOHYDRATES_100G <- as.numeric(df_soja$CARBOHYDRATES_100G)
+df_soja$SUGARS_100G <- as.numeric(df_soja$SUGARS_100G)
+df_soja$PROTEINS_100G <- as.numeric(df_soja$PROTEINS_100G)
 
+summary(df_soja)
+#Elimino los faltantes
+df_soja <- df_soja[complete.cases(df_soja), ]
+
+hist(df_soja$FAT_100G, main = "Histograma de frecuencias FAT_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_soja$CARBOHYDRATES_100G, main = "Histograma de frecuencias CARBOHYDRATES_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_soja$SUGARS_100G, main = "Histograma de frecuencias SUGARS_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_soja$PROTEINS_100G, main = "Histograma de frecuencias PROTEINS_100G", # Frecuencia
+     ylab = "Frecuencia")
+
+df_soja <- na.omit(df_soja)
+df_soja$CREATOR_PRODNAME <- paste(df_soja$CREATOR,'--', df_soja$PRODUCT_NAME)
+df_soja <- df_soja[,3:7]
+df_soja <- subset(df_soja, !duplicated(CREATOR_PRODNAME))
+
+df_soja <- data.frame(
+  row.names = paste(df_soja$CREATOR_PRODNAME),
+  df_soja[, c("FAT_100G", "CARBOHYDRATES_100G", "SUGARS_100G", "PROTEINS_100G")]
+)
+df_soja <- scale(df_soja)
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = df_soja, kmeans, method = "wss")
+print(elbow)
+
+set.seed(123)
+km_clusters <- kmeans(x=df_soja,centers=8,nstart=25)
+fviz_cluster(object=km_clusters,data=df_soja,show.clust.cent = TRUE,
+             ellipse.type="euclid",star.plot=TRUE,repel=TRUE) +
+  labs(title ="Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+datos<-scale(df_soja)
+set.seed(101)
+heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
+                    method = "complete")
+
+fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
+               sub="Distancia euclídea")+
+        theme(plot.title = element_text(hjust=0.5,size=15))
 
 ```
+
+
 
 
 ```{r}
@@ -110,6 +184,7 @@ fviz_cluster(object=km_clusters,data=df_seitan,show.clust.cent = TRUE,
   theme_bw() +
   theme(legend.position = "none")
 ```
+
 ```{r}
 datos<-scale(df_seitan)
 set.seed(101)
