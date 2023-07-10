@@ -11,15 +11,45 @@ library(ggplot2)
 library(cluster)
 library(tidyverse)
 library(ggcorrplot)
+library(writexl)
+library(openxlsx)
+library(PerformanceAnalytics)
+library(corrplot)
 
 ```
 
 
 ```{r}
 #cargamos los datos con las variables que nos interesan
-df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v1.csv', sep=','))
+#df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v3.csv', sep=','))
+df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos_vegan.csv', sep=','))
+
+
+df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
+PRODUCT_NAME <- df[,1]
+ 
+# Filtrar las columnas que contienen el texto "_100G"
+#columnas_filtradas <- grep("_100G", colnames(df))
+#df <- df[, columnas_filtradas]
+#df <- cbind(PRODUCT_NAME,df)
+
+df_nuevo <- df %>%
+  mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
+  select_if(is.numeric)
+total <- as.data.frame(colSums(df_nuevo))
 ```
 
+```{r}
+totales <- colSums(df_nuevo)
+
+# Seleccionar las columnas con un total mayor o igual a 5
+columnas_a_mantener <- totales >= 80
+
+# Eliminar las columnas con un total inferior a 30
+df_nuevo <- df_nuevo[, columnas_a_mantener]
+PRODUCT_NAME <- df[,1]
+df_nuevo <- cbind(PRODUCT_NAME,df_nuevo) 
+```
 
 ```{r}
 #filtros negativos
@@ -30,16 +60,209 @@ palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE S
 verificar_palabras <- function(texto, palabras) {
   sapply(palabras, function(palabra) grepl(palabra, texto))
 }
-
 # Identificar las filas que contienen alguna de las palabras a eliminar
-filas_a_eliminar <- apply(df, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
-
+filas_a_eliminar <- apply(df_nuevo, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
 
 # Eliminar las filas identificadas del dataframe original
-df_nuevo <- df[!filas_a_eliminar, ]
-	
-filas_a_eliminar <- apply(df_nuevo, 1, function(row) any(verificar_palabras(row["QUANTITY"], palabras_a_eliminar)))
-df_nuevo <- df_nuevo[!filas_a_eliminar, ]
+df_nuevo1 <- df_nuevo[!filas_a_eliminar, ]
+#df_nuevo2 <- df_nuevo1[,-1]
+
+#Elimino los faltantes
+df_nuevo1 <- df_nuevo1[complete.cases(df_nuevo1), ]
+
+```
+
+
+```{r}
+df_soja <- subset(df_nuevo1, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
+c_soja <- df_soja[,-1]
+df_seitan <- subset(df_nuevo1, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
+c_seitan <- df_seitan[,-1]
+df_tofu <- subset(df_nuevo1, grepl("tofu", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "tofu"
+c_tofu <- df_tofu[,-1]
+```
+
+```{r}
+summary(df_soja)
+```
+
+
+
+```{r}
+#cor_soja <-  # Si indicamos use = "pairwise.complete.obs": calcula el coeficiente de correlación para aquellas observaciones en las que no faltan ningún valor de “x” ni “y”
+cor_soja <- as.data.frame(cor(c_soja))
+cor_seitan <- as.data.frame(cor(c_seitan))
+cor_tofu <- as.data.frame(cor(c_tofu))
+```
+
+
+
+```{r}
+library(psych)
+#library(rela)
+cortest(cor(c_soja))
+
+```
+```{r}
+cortest.bartlett(cor(c_soja),n=1501)
+
+```
+```{r}
+library(psych)
+KMO(c_soja)
+
+```
+```{r}
+componentes_soja<-prcomp(c_soja, scale=TRUE,center = TRUE)
+componentes_soja
+```
+
+```{r}
+summary(componentes_soja)
+```
+
+```{r}
+cor_soja <- cor_soja %>% rownames_to_column("Var")
+cor_seitan <- cor_seitan %>% rownames_to_column("var")
+cor_tofu <- cor_tofu %>% rownames_to_column("var")
+
+
+#Exportar el dataframe a un archivo Excel con el índice
+
+write_xlsx(cor_soja, "C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/salidas/corr_soja.xlsx")
+write_xlsx(cor_seitan, "C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/salidas/corr_seitan.xlsx")
+write_xlsx(cor_tofu, "C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/salidas/corr_tofu.xlsx")
+
+```
+
+
+```{r}
+df_soja <- scale(c_soja)
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = c_soja, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(c_soja, method = "euclidean"), nstart = 50)
+print(elbow)
+
+set.seed(123)
+km_clusters <- kmeans(x=c_soja,centers=5,nstart=50)
+fviz_cluster(object=km_clusters,data=c_soja,show.clust.cent = TRUE,
+             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+             pointsize=0.5,outlier.color="darkred") +
+  labs(title ="Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+datos<-scale(c_soja)
+set.seed(101)
+heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
+                    method = "complete")
+
+fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
+               sub="Distancia euclídea")+
+        theme(plot.title = element_text(hjust=0.5,size=15))
+```
+```{r}
+require(cluster)
+pam.res <- pam(c_soja, 5)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+```
+
+Con esta imagen se evidencia que hay cierto grado de conflicto entre los clusters, ya que tienen cierta área solapada entre ambos. Estas representaciones mezclan cluster y PCA, pero no indican el grado de representación de cada variable en cada uno de los componentes.
+
+```{r}
+set.seed(20)
+k.means.fit <-kmeans(df_soja[,2:12], 3, nstart = 10)
+k.means.fit 
+```
+```{r}
+k.means.fit$centers
+
+```
+
+```{r}
+k.means.fit$ifault
+
+```
+```{r}
+grupos=k.means.fit$cluster
+table(df_soja$PRODUCT_NAME,grupos) #Matriz de confusión
+```
+```{r}
+df_seitan <- scale(c_seitan)
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = c_seitan, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(c_seitan, method = "euclidean"), nstart = 50)
+print(elbow)
+
+set.seed(123)
+km_clusters <- kmeans(x=c_seitan,centers=5,nstart=50)
+fviz_cluster(object=km_clusters,data=c_seitan,show.clust.cent = TRUE,
+             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+             pointsize=0.5,outlier.color="darkred") +
+  labs(title ="Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+datos<-scale(c_seitan)
+set.seed(101)
+heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
+                    method = "complete")
+
+fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
+               sub="Distancia euclídea")+
+        theme(plot.title = element_text(hjust=0.5,size=15))
+```
+
+
+```{r}
+require(cluster)
+pam.res <- pam(c_seitan, 5)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+```
+
+```{r}
+df_tofu <- scale(c_tofu)
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = c_tofu, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(c_tofu, method = "euclidean"), nstart = 50)
+print(elbow)
+
+set.seed(123)
+km_clusters <- kmeans(x=c_tofu,centers=5,nstart=50)
+fviz_cluster(object=km_clusters,data=c_tofu,show.clust.cent = TRUE,
+             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+             pointsize=0.5,outlier.color="darkred") +
+  labs(title ="Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+datos<-scale(c_tofu)
+set.seed(101)
+heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
+                    method = "complete")
+
+fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
+               sub="Distancia euclídea")+
+        theme(plot.title = element_text(hjust=0.5,size=15))
+```
+
+
+```{r}
+require(cluster)
+pam.res <- pam(c_tofu, 6)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
 ```
 
 
@@ -106,7 +329,7 @@ fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
 
 
 ```{r}
-df_seitan <- subset(df, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
+df_seitan <- subset(df_nuevo, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
 
 df_seitan <- df_seitan[,c('CREATOR','PRODUCT_NAME','FAT_100G','CARBOHYDRATES_100G','SUGARS_100G','PROTEINS_100G')]
 df_seitan$FAT_100G <- as.numeric(df_seitan$FAT_100G)
@@ -295,6 +518,72 @@ fviz_cluster(object=km_clusters,data=df_tofu,show.clust.cent = TRUE,
 
 ```{r}
 datos<-scale(df_tofu)
+set.seed(101)
+heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
+                    method = "complete")
+
+fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
+               sub="Distancia euclídea")+
+        theme(plot.title = element_text(hjust=0.5,size=15))
+```
+
+
+
+## Hagamos revisión del seitán con la data alimentos v2
+
+```{r}
+#cargamos los datos con las variables que nos interesan
+df2 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v2.csv', sep=','))
+df_seitan <- subset(df2, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
+colnames(df_seitan)
+
+```
+
+
+```{r}
+df_seitan <- df_seitan[,c('CREATOR','PRODUCT_NAME','FAT_100G','CARBOHYDRATES_100G','SUGARS_100G','PROTEINS_100G')]
+df_seitan$FAT_100G <- as.numeric(df_seitan$FAT_100G)
+df_seitan$CARBOHYDRATES_100G <- as.numeric(df_seitan$CARBOHYDRATES_100G)
+df_seitan$SUGARS_100G <- as.numeric(df_seitan$SUGARS_100G)
+df_seitan$PROTEINS_100G <- as.numeric(df_seitan$PROTEINS_100G)
+
+summary(df_seitan)
+#Elimino los faltantes
+df_seitan <- df_seitan[complete.cases(df_seitan), ]
+
+hist(df_seitan$FAT_100G, main = "Histograma de frecuencias FAT_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_seitan$CARBOHYDRATES_100G, main = "Histograma de frecuencias CARBOHYDRATES_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_seitan$SUGARS_100G, main = "Histograma de frecuencias SUGARS_100G", # Frecuencia
+     ylab = "Frecuencia")
+hist(df_seitan$PROTEINS_100G, main = "Histograma de frecuencias PROTEINS_100G", # Frecuencia
+     ylab = "Frecuencia")
+
+df_seitan <- na.omit(df_seitan)
+df_seitan$CREATOR_PRODNAME <- paste(df_seitan$CREATOR,'--', df_seitan$PRODUCT_NAME)
+df_seitan <- df_seitan[,3:7]
+df_seitan <- subset(df_seitan, !duplicated(CREATOR_PRODNAME))
+
+df_seitan <- data.frame(
+  row.names = paste(df_seitan$CREATOR_PRODNAME),
+  df_seitan[, c("FAT_100G", "CARBOHYDRATES_100G", "SUGARS_100G", "PROTEINS_100G")]
+)
+df_seitan <- scale(df_seitan)
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = df_seitan, kmeans, method = "wss")
+print(elbow)
+
+set.seed(123)
+km_clusters <- kmeans(x=df_seitan,centers=8,nstart=25)
+fviz_cluster(object=km_clusters,data=df_seitan,show.clust.cent = TRUE,
+             ellipse.type="euclid",star.plot=TRUE,repel=TRUE) +
+  labs(title ="Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+datos<-scale(df_seitan)
 set.seed(101)
 heculidea <- hclust(d = dist(x = datos, method = "euclidean"),
                     method = "complete")
