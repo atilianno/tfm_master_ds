@@ -1,9 +1,11 @@
 ---
 title: "TFM_E2_Grupo02"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2023-06-08"
 ---
-  
+
 ```{r}
 library(dplyr)
 library(factoextra)
@@ -17,7 +19,6 @@ library(PerformanceAnalytics)
 library(corrplot)
 ```
 
-
 ```{r}
 #cargamos los datos con las variables que nos interesan
 #df1 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v3.csv', sep=','))
@@ -26,12 +27,10 @@ df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/T
 
 ```
 
-
 ```{r}
 #df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G","FIBER_100G","SALT_100G","SATURATED_FAT_100G","SUGARS_100G")]
 df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
 ```
-
 
 ```{r}
 PRODUCT_NAME <- df[,1]
@@ -63,7 +62,6 @@ df_nuevo <- cbind(PRODUCT_NAME,df_nuevo)
 
 ```
 
-
 ```{r}
 #elimina vectores fila nulos 
 df_nuevo$suma <- rowSums(df_nuevo[, c("PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")])
@@ -72,7 +70,6 @@ df_nuevo <- df_nuevo[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT
 df_nuevo <- na.omit(df_nuevo)
 
 ```
-
 
 ```{r}
 #filtros negativos
@@ -103,7 +100,6 @@ df_tofu <- na.omit(df_tofu)
 
 ```
 
-
 ```{r}
 # Definir la función para eliminar valores atípicos basados en desviación estándar
 remove_outliers <- function(data, column, sd_threshold = 2) {
@@ -128,7 +124,7 @@ df_tofu <- remove_outliers(df_tofu, "FAT_100G")
 #df_tofu <- remove_outliers(df_tofu, "SUGARS_100G")
 ```
 
-#### SOja #####
+#### SOja
 
 ```{r}
 summary(df_soja)
@@ -157,6 +153,7 @@ s_soja <- scale(df_soja[,-1])
 s_soja1 <- as.data.frame(s_soja)
 summary(s_soja)
 ```
+
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
 columnas_cuantitativas <- sapply(s_soja1, is.numeric)
@@ -206,14 +203,31 @@ pam.res <- pam(s_soja, 4)
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
   labs(title = "Resultados clustering K-means")+ theme_bw()
-
-hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"),
-                         method = "average")
 ```
+
 Con esta imagen se evidencia que hay cierto grado de conflicto entre los clusters, ya que tienen cierta área solapada entre ambos. Estas representaciones mezclan cluster y PCA, pero no indican el grado de representación de cada variable en cada uno de los componentes.
 
+# Biplot PCA y K-Means para medir representatividad soja
 
-### SEITAN####
+```{r}
+
+# PCA
+pca <- prcomp(df_soja[,-1], scale=TRUE)
+df_soja.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df_soja.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+```
+
+
+# SEITAN
 
 ```{r}
 summary(df_seitan)
@@ -242,7 +256,9 @@ s_seitan <- scale(df_seitan[,-1])
 s_seitan1 <- as.data.frame(s_seitan)
 summary(s_seitan)
 ```
+
 #Datos normalizados para el Seitán
+
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
 columnas_cuantitativas <- sapply(s_seitan1, is.numeric)
@@ -259,7 +275,6 @@ for (columna in names(s_seitan1[columnas_cuantitativas])) {
   print(p)
 }
 ```
-
 
 ```{r}
 s_seitan <- scale(df_seitan[,-1])
@@ -294,12 +309,30 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
   labs(title = "Resultados clustering K-means")+ theme_bw()
 ```
-##### TOfu #####
+# Biplot PCA y K-Means para medir representatividad seitan
+
+```{r}
+
+# PCA
+pca <- prcomp(df_seitan[,-1], scale=TRUE)
+df_seitan.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df_seitan.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+```
+##### TOfu
+
 ```{r}
 summary(df_tofu)
 
 ```
-
 
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
@@ -323,7 +356,9 @@ s_tofu <- scale(df_tofu[,-1])
 s_tofu1 <- as.data.frame(s_tofu)
 summary(s_tofu)
 ```
+
 #Datos normalizados para el Tofu
+
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
 columnas_cuantitativas <- sapply(s_tofu1, is.numeric)
@@ -340,9 +375,6 @@ for (columna in names(s_tofu1[columnas_cuantitativas])) {
   print(p)
 }
 ```
-
-
-
 
 ```{r}
 s_tofu <- scale(df_tofu[,-1])
@@ -378,10 +410,27 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
   labs(title = "Resultados clustering K-means")+ theme_bw()
 
 ```
+# Biplot PCA y K-Means para medir representatividad tofu
 
+```{r}
+
+# PCA
+pca <- prcomp(df_tofu[,-1], scale=TRUE)
+df_tofu.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df_tofu.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+```
 # Método no jerárquico CLARA basado en simulación y muestreo
 
-# Soja 
+# Soja
 
 ```{r}
 clara_clusters <- clara(x = scale(df_soja[,-1]), k = 4, metric = "manhattan", stand = TRUE,
@@ -396,7 +445,9 @@ fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
   labs(title = "Resultados clustering CLARA") +
   theme(legend.position = "none")
 ```
+
 # Seitán
+
 ```{r}
 clara_clusters <- clara(x = scale(df_seitan[,-1]), k = 3, metric = "manhattan", stand = TRUE,
                         samples = 60, pamLike = TRUE)
@@ -410,6 +461,8 @@ fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
   labs(title = "Resultados clustering CLARA") +
   theme(legend.position = "none")
 ```
+
+# Tofu
 
 ```{r}
 df_tofu <- na.omit(df_tofu)
