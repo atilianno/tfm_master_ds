@@ -17,64 +17,66 @@ library(writexl)
 library(openxlsx)
 library(PerformanceAnalytics)
 library(corrplot)
+library(ggplot2)
+library(car)
+library(simstudy)
+library(data.table)
+library(corrr)
+#install.packages("dbscan")
+library(dbscan)
+library(DMwR2)
+library(FactoMineR)
+library(factoextra)
+library(ggthemes)
 ```
 
 ```{r}
 #cargamos los datos con las variables que nos interesan
 #df1 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v3.csv', sep=','))
 #df2 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos_vegan.csv', sep=','))
-df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v4.csv', sep=','))
+df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v7.csv', sep=','))
+```
+
+# Selecciona columnas a investigar y Elimina registros duplicados
+
+```{r}
+df <- df[,c("ISO3","PRODUCT_NAME","ENERGY_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G")]
+#df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
+# Elimina registros duplicados
+df <- subset(df, !duplicated(df))
 
 ```
 
 ```{r}
-#df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G","FIBER_100G","SALT_100G","SATURATED_FAT_100G","SUGARS_100G")]
-df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
-```
-
-```{r}
-PRODUCT_NAME <- df[,1]
- 
-# Filtrar las columnas que contienen el texto "_100G"
-#columnas_filtradas <- grep("_100G", colnames(df))
-#df <- df[, columnas_filtradas]
-#df <- cbind(PRODUCT_NAME,df)
-
-#Convertir a numerico todo
+PRODUCT_NAME <- df[,"PRODUCT_NAME"]
+ISO3 <- df[,"ISO3"]
+ #Convertir a numerico todo
 df_nuevo <- df %>%
   mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
   select_if(is.numeric)
-
-total <- as.data.frame(colSums(df_nuevo))
-totalc <- as.data.frame(rowSums(df_nuevo))
+PRODUCT_NAME <- df[,"PRODUCT_NAME"]
+df_nuevo <- cbind(ISO3,PRODUCT_NAME,df_nuevo)
 ```
 
+# Eliminar vectores fila nulos
 ```{r}
-totales <- colSums(df_nuevo)
+# Sumar las columnas del dataframe
+suma_columnas <- rowSums(df_nuevo[,3:ncol(df_nuevo)])
 
-# Seleccionar las columnas con un total mayor o igual a 5
-#columnas_a_mantener <- totales >= 10000
+# Agregar la variable de suma al dataframe
+df_nuevo <- cbind(df_nuevo, suma = suma_columnas)
 
-# Eliminar las columnas con un total inferior a 30
-#df_nuevo <- df_nuevo[, columnas_a_mantener]
-PRODUCT_NAME <- df[,1]
-df_nuevo <- cbind(PRODUCT_NAME,df_nuevo)
+df_nuevo <- subset(df_nuevo, suma != 0)
+df_nuevo <- df_nuevo[, -which(names(df_nuevo) == "suma")]
 
+cantidad_ceros_por_columna <- colSums(df_nuevo == 0)
+
+print(cantidad_ceros_por_columna)
 ```
-
+# Aplicar filtros negativos
 ```{r}
-#elimina vectores fila nulos 
-df_nuevo$suma <- rowSums(df_nuevo[, c("PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")])
-df_nuevo <- subset(df_nuevo, !(suma == 0))
-df_nuevo <- df_nuevo[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
-df_nuevo <- na.omit(df_nuevo)
-
-```
-
-```{r}
-#filtros negativos
 # Crear un vector con las palabras a buscar
-palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA", "GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT")
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA", "GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA")
 
 # Crear una función que verifica si alguna de las palabras está presente en el texto
 verificar_palabras <- function(texto, palabras) {
@@ -94,145 +96,121 @@ df_nuevo1 <- df_nuevo1[complete.cases(df_nuevo1), ]
 
 ```{r}
 df_soja <- subset(df_nuevo1, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
+df_soja <- na.omit(df_soja)
+
 df_seitan <- subset(df_nuevo1, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
+df_seitan <- na.omit(df_seitan)
+
 df_tofu <- subset(df_nuevo1, grepl("tofu", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "tofu"
 df_tofu <- na.omit(df_tofu)
 
 ```
 
+# Frecuencia de productos por país de orígen
 ```{r}
-# Definir la función para eliminar valores atípicos basados en desviación estándar
-remove_outliers <- function(data, column, sd_threshold = 2) {
-  data[abs(scale(data[[column]])) < sd_threshold, ]
-}
-# Eliminar valores atípicos en columna1 utilizando desviación estándar
-df_soja <- remove_outliers(df_soja, "PROTEINS_100G")
-df_soja <- remove_outliers(df_soja, "CARBOHYDRATES_100G")
-df_soja <- remove_outliers(df_soja, "FAT_100G")
-#df_soja <- remove_outliers(df_soja, "SUGARS_100G")
-
-# Eliminar valores atípicos en columna1 utilizando desviación estándar
-df_seitan <- remove_outliers(df_seitan, "PROTEINS_100G")
-df_seitan <- remove_outliers(df_seitan, "CARBOHYDRATES_100G")
-df_seitan <- remove_outliers(df_seitan, "FAT_100G")
-#df_seitan <- remove_outliers(df_seitan, "SUGARS_100G")
-
-# Eliminar valores atípicos en columna1 utilizando desviación estándar
-df_tofu <- remove_outliers(df_tofu, "PROTEINS_100G")
-df_tofu <- remove_outliers(df_tofu, "CARBOHYDRATES_100G")
-df_tofu <- remove_outliers(df_tofu, "FAT_100G")
-#df_tofu <- remove_outliers(df_tofu, "SUGARS_100G")
+print(table(df_seitan$ISO3))
+print(table(df_tofu$ISO3))
+print(table(df_soja$ISO3))
 ```
-
-#### SOja
-
-```{r}
-summary(df_soja)
-
-```
-
-```{r}
-# Obtener las columnas cuantitativas del dataframe
-columnas_cuantitativas <- sapply(df_soja, is.numeric)
-
-# Crear un histograma para cada columna cuantitativa
-for (columna in names(df_soja[columnas_cuantitativas])) {
-  plot_data <- df_soja[, columna]
-  p <- ggplot(data.frame(x = plot_data), aes(x)) +
-    geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
-         x = columna,
-         y = "Frecuencia")
-  
-  print(p)
-}
-```
-
-```{r}
-s_soja <- scale(df_soja[,-1])
-s_soja1 <- as.data.frame(s_soja)
-summary(s_soja)
-```
-
-```{r}
-# Obtener las columnas cuantitativas del dataframe
-columnas_cuantitativas <- sapply(s_soja1, is.numeric)
-
-# Crear un histograma para cada columna cuantitativa
-for (columna in names(s_soja1[columnas_cuantitativas])) {
-  plot_data <- s_soja1[, columna]
-  p <- ggplot(data.frame(x = plot_data), aes(x)) +
-    geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
-         x = columna,
-         y = "Frecuencia")
-  
-  print(p)
-}
-```
-
-```{r}
-#total de cluster óptimos
-elbow <- fviz_nbclust(x = s_soja, FUNcluster = kmeans, method = "wss", k.max = 15, 
-             diss = get_dist(s_soja, method = "euclidean"), nstart = 25)
-print(elbow)
-
-#Clustering K-means
-set.seed(123)
-km_clusters <- kmeans(x=s_soja,centers=4,nstart=25)
-fviz_cluster(object=km_clusters,data=s_soja,show.clust.cent = TRUE,
-             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
-             pointsize=0.5,outlier.color="darkred") +
-  labs(title ="Resultados clustering K-means") +
-  theme_bw() +
-  theme(legend.position = "none")
-
-#Dedrograma
-set.seed(101)
-heculidea <- hclust(d = dist(x = s_soja, method = "euclidean"),
-                    method = "complete")
-
-fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
-               sub="Distancia euclídea")+
-        theme(plot.title = element_text(hjust=0.5,size=15))
-
-#Resultados clustering K-means
-require(cluster)
-pam.res <- pam(s_soja, 4)
-# Visualización
-fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
-             show.clust.cent = TRUE,star.plot = TRUE)+
-  labs(title = "Resultados clustering K-means")+ theme_bw()
-```
-
-Con esta imagen se evidencia que hay cierto grado de conflicto entre los clusters, ya que tienen cierta área solapada entre ambos. Estas representaciones mezclan cluster y PCA, pero no indican el grado de representación de cada variable en cada uno de los componentes.
-
-# Biplot PCA y K-Means para medir representatividad soja
-
-```{r}
-
-# PCA
-pca <- prcomp(df_soja[,-1], scale=TRUE)
-df_soja.pca <- pca$x
-# Cluster over the three first PCA dimensions
-kc <- kmeans(df_soja.pca[,1:3], 3)
-fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
-  labs(color=NULL) + ggtitle("") +
-  theme(text = element_text(size = 15),
-        panel.background = element_blank(), 
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black"),
-        legend.key = element_rect(fill = "white"))
-```
-
-
 # SEITAN
 
 ```{r}
-summary(df_seitan)
+# Aplicar algoritmo Local Outliers Factor para eliminar atípicos
+
+# 1.- First, we need to convert the incorrect type of variables.
+
+seitan_clean <- df_seitan %>%
+  mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
+str(seitan_clean)
+
+seitan_clean <- as.data.frame(scale(df_seitan[,-1:-2]))
+seitan_lof <- lof(seitan_clean, minPts = 7)
+head(seitan_clean)
+
+#PCA and use the first two dimensions of the PCA
+library(FactoMineR)
+library(factoextra)
+
+seitan_pca <- PCA(seitan_clean, scale.unit = F, ncp = 6, graph = F)
 
 ```
+```{r}
+summary(seitan_pca)
+
+```
+```{r}
+fviz_eig(seitan_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions")
+
+```
+```{r}
+library(ggthemes)
+seitan_a <- data.frame(seitan_pca$ind$coord[,1:3])
+seitan_b <- cbind(seitan_a, lof_score = seitan_lof)
+#seitan_b <- cbind(seitan_a, fraud = seitan_clean$, lof_score = seitan_clean$lof)
+
+seitan_lof_visual <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2)) + 
+    geom_point(aes(size=lof_score)) +
+  ggtitle("LOF Score Distribution")+
+    theme_minimal()
+
+seitan_lof_visual
+
+```
+```{r}
+summary(seitan_b)
+
+```
+```{r}
+seitan_b %>%
+  filter(lof_score <= 1.75) %>% 
+  ggplot( aes(x=lof_score)) +
+    geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
+    scale_fill_manual(values="#8fce00") +
+    xlab("LOF Score")+
+  ggtitle("LOF Score Distribution")+
+    theme_minimal() +
+    labs(fill="")
+```
+```{r}
+quantile(seitan_b$lof_score, probs = c(0, 0.8))
+
+```
+
+```{r}
+seitan_b <- seitan_b %>% 
+  mutate(outlier = ifelse(lof_score > 1.3319420, 1, 0))
+
+seitan_lof_visual_b <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
+    geom_point() +
+  ggtitle("LOF Score Distribution")+
+    theme_minimal()
+
+seitan_lof_visual_b
+```
+```{r}
+outliers <- seitan_b[seitan_b$outlier==1,]
+nooutliers <- seitan_b[seitan_b$outlier==0,]
+```
+
+```{r}
+df_seitan <- df_seitan[seitan_lof < 1.3319420,]
+df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319420,]
+
+```
+
+# Eliminar valores atipicos univariantes
+
+```{r}
+# remove_outliers <- function(data, column, sd_threshold = 2) {
+#   data[abs(scale(data[[column]])) < sd_threshold, ]
+# }
+# 
+# columns_to_check <- 3:ncol(df_seitan)
+# for (column in columns_to_check) {
+#   df_seitan <- remove_outliers(df_seitan, column)
+# }
+```
+
 
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
@@ -250,22 +228,20 @@ for (columna in names(df_seitan[columnas_cuantitativas])) {
   print(p)
 }
 ```
-
 ```{r}
-s_seitan <- scale(df_seitan[,-1])
-s_seitan1 <- as.data.frame(s_seitan)
-summary(s_seitan)
+summary(as.data.frame(scale(df_seitan[,-1:-2])))
 ```
 
 #Datos normalizados para el Seitán
 
 ```{r}
+s_seitan <- as.data.frame(scale(df_seitan[,-1:-2]))
 # Obtener las columnas cuantitativas del dataframe
-columnas_cuantitativas <- sapply(s_seitan1, is.numeric)
+columnas_cuantitativas <- sapply(s_seitan, is.numeric)
 
 # Crear un histograma para cada columna cuantitativa
-for (columna in names(s_seitan1[columnas_cuantitativas])) {
-  plot_data <- s_seitan1[, columna]
+for (columna in names(s_seitan[columnas_cuantitativas])) {
+  plot_data <- s_seitan[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
     labs(title = paste("Histograma de", columna),
@@ -277,22 +253,31 @@ for (columna in names(s_seitan1[columnas_cuantitativas])) {
 ```
 
 ```{r}
-s_seitan <- scale(df_seitan[,-1])
+s_seitan <- scale(df_seitan[,-1:-2])
 
 # total de cluster óptimos
 elbow <- fviz_nbclust(x = s_seitan, FUNcluster = kmeans, method = "wss", k.max = 15, 
              diss = get_dist(s_seitan, method = "euclidean"), nstart = 25)
 print(elbow)
 
-set.seed(123)
-km_clusters <- kmeans(x=s_seitan,centers=4,nstart=25)
-fviz_cluster(object=km_clusters,data=s_seitan,show.clust.cent = TRUE,
-             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
-             pointsize=0.5,outlier.color="darkred") +
-  labs(title ="Resultados clustering K-means") +
-  theme_bw() +
-  theme(legend.position = "none")
+# set.seed(123)
+# km_clusters <- kmeans(x=s_seitan,centers=4,nstart=25)
+# fviz_cluster(object=km_clusters,data=s_seitan,show.clust.cent = TRUE,
+#              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+#              pointsize=0.5,outlier.color="darkred") +
+#   labs(title ="Resultados clustering K-means") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
+set.seed(123)
+km_clusters <- kmeans(x = s_seitan, centers = 4, nstart = 25)
+
+fviz_cluster(object = km_clusters, data = s_seitan, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize = 0.5, outlier.color = "darkred", geom = "point") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle("Resultados clustering K-means")
 
 set.seed(101)
 heculidea <- hclust(d = dist(x = s_seitan, method = "euclidean"),
@@ -314,10 +299,10 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
 ```{r}
 
 # PCA
-pca <- prcomp(df_seitan[,-1], scale=TRUE)
+pca <- prcomp(df_seitan[,-1:-2], scale=TRUE)
 df_seitan.pca <- pca$x
 # Cluster over the three first PCA dimensions
-kc <- kmeans(df_seitan.pca[,1:3], 3)
+kc <- kmeans(df_seitan.pca[,1:3], 4)
 fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
   labs(color=NULL) + ggtitle("") +
   theme(text = element_text(size = 15),
@@ -327,12 +312,198 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
         axis.line = element_line(colour = "black"),
         legend.key = element_rect(fill = "white"))
 ```
+
+```{r}
+library(ggplot2)
+
+# Obtener los centroides de cada clúster
+centroids <- as.data.frame(km_clusters$centers)
+
+
+# Obtener el valor mínimo y máximo en el dataframe
+min_value <- min(centroids, na.rm = TRUE)
+max_value <- max(centroids, na.rm = TRUE)
+
+# Escalar los datos entre 0 y 1
+scaled_df <- (centroids - min_value) / (max_value - min_value)
+
+library(fmsb)
+
+
+# Define the variable ranges: maximum and minimum
+max_min <- data.frame(
+  ENERGY_100G = c(1, 0), FAT_100G = c(1, 0), CARBOHYDRATES_100G = c(1, 0),PROTEINS_100G = c(1, 0)
+)
+rownames(max_min) <- c("Max", "Min")
+
+# Bind the variable ranges to the data
+df <- rbind(max_min, scaled_df)
+```
+
+```{r}
+create_beautiful_radarchart <- function(data, color = "#00AFBB", 
+                                        vlabels = colnames(data), vlcex = 0.7,
+                                        caxislabels = NULL, title = NULL, ...){
+  radarchart(
+    data, axistype = 1,
+    # Customize the polygon
+    pcol = color, pfcol = scales::alpha(color, 0.3), plwd = 2, plty = 1,
+    # Customize the grid
+    cglcol = "grey", cglty = 1, cglwd = 0.8,
+    # Customize the axis
+    axislabcol = "grey", 
+    # Variable labels
+    vlcex = vlcex, vlabels = vlabels,
+    caxislabels = caxislabels, title = title, ...
+  )
+}
+```
+
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 1))
+create_beautiful_radarchart(df, caxislabels = c(0, .25, .5, .75, 1))
+par(op)
+```
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 2))
+# Create the radar charts
+create_beautiful_radarchart(
+  data = df, caxislabels = c(0, .25, .5, .75, 1),
+  color = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B")
+)
+# Add an horizontal legend
+legend(
+  x = "bottom", legend = rownames(df[-c(1,2),]), horiz = TRUE,
+  bty = "n", pch = 20 , col = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B"),
+  text.col = "black", cex = 1, pt.cex = 1.5
+  )
+par(op)
+```
+
+
+```{r}
+# Define colors and titles
+colors <- c("#00AFBB", "#E7B800", "#FC4E07","blue")
+titles <- c("1", "2", "3","4")
+
+# Reduce plot margin using par()
+# Split the screen in 3 parts
+op <- par(mar = c(1, 1, 1, 1))
+
+par(mfrow = c(1,4))
+
+# Create the radar chart
+for(i in 1:4){
+  create_beautiful_radarchart(
+    data = df[c(1, 2, i+2), ], caxislabels = c(0, .25, .5, .75, 1),
+    color = colors[i], title = titles[i]
+    )
+}
+par(op)
+
+```
+
 ##### TOfu
 
 ```{r}
-summary(df_tofu)
+# Aplicar algoritmo Local Outliers Factor para eliminar atípicos
+
+# 1.- First, we need to convert the incorrect type of variables.
+
+tofu_clean <- df_tofu %>%
+  mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
+str(tofu_clean)
+
+tofu_clean <- as.data.frame(scale(df_tofu[,-1:-2]))
+tofu_lof <- lof(tofu_clean, minPts = 7)
+head(tofu_clean)
+
+#PCA and use the first two dimensions of the PCA
+library(FactoMineR)
+library(factoextra)
+
+tofu_pca <- PCA(tofu_clean, scale.unit = F, ncp = 6, graph = F)
+```
+
+```{r}
+summary(tofu_pca)
 
 ```
+```{r}
+fviz_eig(tofu_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions")
+
+```
+```{r}
+library(ggthemes)
+tofu_a <- data.frame(tofu_pca$ind$coord[,1:3])
+tofu_b <- cbind(tofu_a, lof_score = tofu_lof)
+#tofu_b <- cbind(tofu_a, fraud = tofu_clean$, lof_score = tofu_clean$lof)
+
+tofu_lof_visual <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2)) + 
+    geom_point(aes(size=lof_score)) +
+  ggtitle("LOF Score Distribution")+
+    theme_minimal()
+
+tofu_lof_visual
+
+```
+```{r}
+summary(tofu_b)
+
+```
+```{r}
+tofu_b %>%
+  filter(lof_score <= 1.75) %>% 
+  ggplot( aes(x=lof_score)) +
+    geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
+    scale_fill_manual(values="#8fce00") +
+    xlab("LOF Score")+
+  ggtitle("LOF Score Distribution")+
+    theme_minimal() +
+    labs(fill="")
+```
+```{r}
+quantile(tofu_b$lof_score, probs = c(0, 0.8))
+
+```
+
+```{r}
+tofu_b <- tofu_b %>% 
+  mutate(outlier = ifelse(lof_score > 1.2822731, 1, 0))
+
+tofu_lof_visual_b <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
+    geom_point() +
+  ggtitle("LOF Score Distribution")+
+    theme_minimal()
+
+tofu_lof_visual_b
+```
+```{r}
+outliers <- tofu_b[tofu_b$outlier==1,]
+nooutliers <- tofu_b[tofu_b$outlier==0,]
+```
+
+```{r}
+df_tofu <- df_tofu[tofu_lof < 1.2822731,]
+df_tofu_outliers <- df_tofu[tofu_lof >= 1.2822731,]
+
+```
+
+# Eliminar valores atipicos univariantes
+
+```{r}
+remove_outliers <- function(data, column, sd_threshold = 2) {
+  data[abs(scale(data[[column]])) < sd_threshold, ]
+}
+
+columns_to_check <- 3:ncol(df_tofu)
+for (column in columns_to_check) {
+  df_tofu <- remove_outliers(df_tofu, column)
+}
+```
+
 
 ```{r}
 # Obtener las columnas cuantitativas del dataframe
@@ -350,22 +521,20 @@ for (columna in names(df_tofu[columnas_cuantitativas])) {
   print(p)
 }
 ```
-
 ```{r}
-s_tofu <- scale(df_tofu[,-1])
-s_tofu1 <- as.data.frame(s_tofu)
-summary(s_tofu)
+summary(as.data.frame(scale(df_tofu[,-1:-2])))
 ```
 
-#Datos normalizados para el Tofu
+#Datos normalizados para el tofu
 
 ```{r}
+s_tofu <- as.data.frame(scale(df_tofu[,-1:-2]))
 # Obtener las columnas cuantitativas del dataframe
-columnas_cuantitativas <- sapply(s_tofu1, is.numeric)
+columnas_cuantitativas <- sapply(s_tofu, is.numeric)
 
 # Crear un histograma para cada columna cuantitativa
-for (columna in names(s_tofu1[columnas_cuantitativas])) {
-  plot_data <- s_tofu1[, columna]
+for (columna in names(s_tofu[columnas_cuantitativas])) {
+  plot_data <- s_tofu[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
     labs(title = paste("Histograma de", columna),
@@ -377,22 +546,31 @@ for (columna in names(s_tofu1[columnas_cuantitativas])) {
 ```
 
 ```{r}
-s_tofu <- scale(df_tofu[,-1])
+s_tofu <- scale(df_tofu[,-1:-2])
 
 # total de cluster óptimos
 elbow <- fviz_nbclust(x = s_tofu, FUNcluster = kmeans, method = "wss", k.max = 15, 
              diss = get_dist(s_tofu, method = "euclidean"), nstart = 25)
 print(elbow)
 
-set.seed(123)
-km_clusters <- kmeans(x=s_tofu,centers=4,nstart=25)
-fviz_cluster(object=km_clusters,data=s_tofu,show.clust.cent = TRUE,
-             ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
-             pointsize=0.5,outlier.color="darkred") +
-  labs(title ="Resultados clustering K-means") +
-  theme_bw() +
-  theme(legend.position = "none")
+# set.seed(123)
+# km_clusters <- kmeans(x=s_tofu,centers=4,nstart=25)
+# fviz_cluster(object=km_clusters,data=s_tofu,show.clust.cent = TRUE,
+#              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+#              pointsize=0.5,outlier.color="darkred") +
+#   labs(title ="Resultados clustering K-means") +
+#   theme_bw() +
+#   theme(legend.position = "none")
 
+set.seed(123)
+km_clusters <- kmeans(x = s_tofu, centers = 4, nstart = 25)
+
+fviz_cluster(object = km_clusters, data = s_tofu, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize = 0.5, outlier.color = "darkred", geom = "point") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle("Resultados clustering K-means")
 
 set.seed(101)
 heculidea <- hclust(d = dist(x = s_tofu, method = "euclidean"),
@@ -408,17 +586,16 @@ pam.res <- pam(s_tofu, 4)
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
   labs(title = "Resultados clustering K-means")+ theme_bw()
-
 ```
 # Biplot PCA y K-Means para medir representatividad tofu
 
 ```{r}
 
 # PCA
-pca <- prcomp(df_tofu[,-1], scale=TRUE)
+pca <- prcomp(df_tofu[,-1:-2], scale=TRUE)
 df_tofu.pca <- pca$x
 # Cluster over the three first PCA dimensions
-kc <- kmeans(df_tofu.pca[,1:3], 3)
+kc <- kmeans(df_tofu.pca[,1:3], 4)
 fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
   labs(color=NULL) + ggtitle("") +
   theme(text = element_text(size = 15),
@@ -428,23 +605,133 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
         axis.line = element_line(colour = "black"),
         legend.key = element_rect(fill = "white"))
 ```
-# Método no jerárquico CLARA basado en simulación y muestreo
-
-# Soja
 
 ```{r}
-clara_clusters <- clara(x = scale(df_soja[,-1]), k = 4, metric = "manhattan", stand = TRUE,
-                        samples = 60, pamLike = TRUE)
-clara_clusters$sample
-clara_clusters$medoids
-clara_clusters$i.med
-clara_clusters$clustering
-table(clara_clusters$clustering)
-fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
-             pointsize = 1.5) +  theme_bw() +
-  labs(title = "Resultados clustering CLARA") +
-  theme(legend.position = "none")
+library(ggplot2)
+
+# Obtener los centroides de cada clúster
+centroids <- as.data.frame(km_clusters$centers)
+
+
+# Obtener el valor mínimo y máximo en el dataframe
+min_value <- min(centroids, na.rm = TRUE)
+max_value <- max(centroids, na.rm = TRUE)
+
+# Escalar los datos entre 0 y 1
+scaled_df <- (centroids - min_value) / (max_value - min_value)
+
+library(fmsb)
+
+
+# Define the variable ranges: maximum and minimum
+max_min <- data.frame(
+  ENERGY_100G = c(1, 0), FAT_100G = c(1, 0), CARBOHYDRATES_100G = c(1, 0),PROTEINS_100G = c(1, 0)
+)
+rownames(max_min) <- c("Max", "Min")
+
+# Bind the variable ranges to the data
+df <- rbind(max_min, scaled_df)
 ```
+
+```{r}
+create_beautiful_radarchart <- function(data, color = "#00AFBB", 
+                                        vlabels = colnames(data), vlcex = 0.7,
+                                        caxislabels = NULL, title = NULL, ...){
+  radarchart(
+    data, axistype = 1,
+    # Customize the polygon
+    pcol = color, pfcol = scales::alpha(color, 0.3), plwd = 2, plty = 1,
+    # Customize the grid
+    cglcol = "grey", cglty = 1, cglwd = 0.8,
+    # Customize the axis
+    axislabcol = "grey", 
+    # Variable labels
+    vlcex = vlcex, vlabels = vlabels,
+    caxislabels = caxislabels, title = title, ...
+  )
+}
+```
+
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 1))
+create_beautiful_radarchart(df, caxislabels = c(0, .25, .5, .75, 1))
+par(op)
+```
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 2))
+# Create the radar charts
+create_beautiful_radarchart(
+  data = df, caxislabels = c(0, .25, .5, .75, 1),
+  color = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B")
+)
+# Add an horizontal legend
+legend(
+  x = "bottom", legend = rownames(df[-c(1,2),]), horiz = TRUE,
+  bty = "n", pch = 20 , col = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B"),
+  text.col = "black", cex = 1, pt.cex = 1.5
+  )
+par(op)
+```
+
+
+```{r}
+# Define colors and titles
+colors <- c("#00AFBB", "#E7B800", "#FC4E07","blue")
+titles <- c("1", "2", "3","4")
+
+# Reduce plot margin using par()
+# Split the screen in 3 parts
+op <- par(mar = c(1, 1, 1, 1))
+
+par(mfrow = c(1,4))
+
+# Create the radar chart
+for(i in 1:4){
+  create_beautiful_radarchart(
+    data = df[c(1, 2, i+2), ], caxislabels = c(0, .25, .5, .75, 1),
+    color = colors[i], title = titles[i]
+    )
+}
+par(op)
+
+```
+# Identificar los productos que están más cerca de cada centroide. Top20
+
+```{r}
+# Calcular el centroide de cada grupo
+df_seitan_pba <- df_seitan[,-1]
+row.names(df_seitan_pba) <- df_seitan_pba$PRODUCT_NAME
+df_seitan_pba <- df_seitan_pba[, -1]
+#km.res <- kmeans(s_seitan, 4, nstart = 25)
+#print(km.res)
+```
+
+
+#### SOja
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Método no jerárquico CLARA basado en simulación y muestreo
 
 # Seitán
 
@@ -480,3 +767,167 @@ fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
   labs(title = "Resultados clustering CLARA") +
   theme(legend.position = "none")
 ```
+# Soja
+
+```{r}
+clara_clusters <- clara(x = scale(df_soja[,-1]), k = 4, metric = "manhattan", stand = TRUE,
+                        samples = 60, pamLike = TRUE)
+clara_clusters$sample
+clara_clusters$medoids
+clara_clusters$i.med
+clara_clusters$clustering
+table(clara_clusters$clustering)
+fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
+             pointsize = 1.5) +  theme_bw() +
+  labs(title = "Resultados clustering CLARA") +
+  theme(legend.position = "none")
+```
+
+
+# Métodos de clasificación Jerárquica
+
+```{r}
+datj <- scale(df_seitan[,-1])
+rownames(datj) <- df_seitan[,1]
+# Matriz de distancias euclideas
+mat_dist <- dist(x = datj, method = "euclidean")
+# Dendrogramas con linkage complete y average
+hc_euclidea_complete <- hclust(d = mat_dist, method = "complete")
+hc_euclidea_average  <- hclust(d = mat_dist, method = "average")
+hc_euclidea_single  <- hclust(d = mat_dist, method = "single")
+hc_euclidea_ward.D2  <- hclust(d = mat_dist, method = "ward.D2")
+hc_euclidea_median  <- hclust(d = mat_dist, method = "median")
+hc_euclidea_centroid  <- hclust(d = mat_dist, method = "centroid")
+hc_euclidea_mcquitty  <- hclust(d = mat_dist, method = "mcquitty")
+cor(x = mat_dist, cophenetic(hc_euclidea_complete))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_average)) ## Tiene la mayor correlación
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_single))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_ward.D2))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_median))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_centroid)) 
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_mcquitty))
+```
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 2, cex = 0.5,
+          k_colors = c("red", "green"), color_labels_by_k = TRUE,
+          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 2")
+
+```
+```{r}
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"),
+                         method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
+          k_colors = c("red","green","orange"),color_labels_by_k = T,
+          lwd = 0.2,type = "r",label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed") +
+  labs(title = "Herarchical clustering",
+       subtitle = "Distancia euclidea, Average, k=3")
+```
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
+          k_colors = c("red", "green", "orange"), color_labels_by_k = TRUE,
+          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 3")
+
+```
+
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))
+
+# Definir colores personalizados para 4 clusters
+cluster_colors <- c("red", "green", "blue", "orange")
+
+# Crear vector de colores etiquetados por observación
+label_colors <- rep(cluster_colors, length.out = n_groups)
+
+# Graficar el dendrograma con colores personalizados
+fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
+          lwd = 0.2, type = "c", label_cols = label_colors,
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 4")
+
+```
+
+
+
+```{r}
+#Examples
+scale_seitan <- scale(df_seitan[,-1])
+
+### calculate LOF score with a neighborhood of 3 points
+lof <- lof(scale_seitan, minPts = 3)
+
+### distribution of outlier factors
+summary(lof)
+hist(lof, breaks = 10, main = "LOF (minPts = 3)")
+
+### plot sorted lof. Looks like outliers start arounf a LOF of 2.
+plot(sort(lof), type = "l",  main = "LOF (minPts = 3)",
+  xlab = "Points sorted by LOF", ylab = "LOF")
+
+### point size is proportional to LOF and mark points with a LOF > 2
+plot(scale_seitan, pch = ".", main = "LOF (minPts = 3)", asp = 1)
+points(scale_seitan, cex = (lof - 1) * 2, pch = 1, col = "red")
+text(scale_seitan[lof > 2,], labels = round(lof, 1)[lof > 2], pos = 3)
+
+```
+
+```{r}
+library(DMwR2)
+
+# Remove "Species", which is a categorical column
+scale_seitan <- scale(df_seitan[, -1])
+
+outlier.scores <- lofactor(scale_seitan, k = 5)
+
+# Remove observations with missing values
+outlier.scores <- outlier.scores[complete.cases(outlier.scores)]
+
+plot(density(outlier.scores))
+
+```
+```{r}
+outliers <- order(outlier.scores, decreasing=T)[1:5]
+```
+
