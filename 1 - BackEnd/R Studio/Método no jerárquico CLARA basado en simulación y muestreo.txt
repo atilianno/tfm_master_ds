@@ -1,0 +1,201 @@
+
+
+# Método no jerárquico CLARA basado en simulación y muestreo
+
+# Seitán
+
+```{r}
+clara_clusters <- clara(x = scale(df_seitan[,-1]), k = 3, metric = "manhattan", stand = TRUE,
+                        samples = 60, pamLike = TRUE)
+clara_clusters$sample
+clara_clusters$medoids
+clara_clusters$i.med
+clara_clusters$clustering
+table(clara_clusters$clustering)
+fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
+             pointsize = 1.5) +  theme_bw() +
+  labs(title = "Resultados clustering CLARA") +
+  theme(legend.position = "none")
+```
+
+# soja
+
+```{r}
+df_soja <- na.omit(df_soja)
+
+
+clara_clusters <- clara(x = scale(df_tofu[,-1]), k = 3, metric = "manhattan", stand = TRUE,
+                        samples = 60, pamLike = TRUE)
+clara_clusters$sample
+clara_clusters$medoids
+clara_clusters$i.med
+clara_clusters$clustering
+table(clara_clusters$clustering)
+fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
+             pointsize = 1.5) +  theme_bw() +
+  labs(title = "Resultados clustering CLARA") +
+  theme(legend.position = "none")
+```
+# Soja
+
+```{r}
+clara_clusters <- clara(x = scale(df_soja[,-1]), k = 4, metric = "manhattan", stand = TRUE,
+                        samples = 60, pamLike = TRUE)
+clara_clusters$sample
+clara_clusters$medoids
+clara_clusters$i.med
+clara_clusters$clustering
+table(clara_clusters$clustering)
+fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
+             pointsize = 1.5) +  theme_bw() +
+  labs(title = "Resultados clustering CLARA") +
+  theme(legend.position = "none")
+```
+
+
+# Métodos de clasificación Jerárquica
+
+```{r}
+datj <- scale(df_seitan[,-1])
+rownames(datj) <- df_seitan[,1]
+# Matriz de distancias euclideas
+mat_dist <- dist(x = datj, method = "euclidean")
+# Dendrogramas con linkage complete y average
+hc_euclidea_complete <- hclust(d = mat_dist, method = "complete")
+hc_euclidea_average  <- hclust(d = mat_dist, method = "average")
+hc_euclidea_single  <- hclust(d = mat_dist, method = "single")
+hc_euclidea_ward.D2  <- hclust(d = mat_dist, method = "ward.D2")
+hc_euclidea_median  <- hclust(d = mat_dist, method = "median")
+hc_euclidea_centroid  <- hclust(d = mat_dist, method = "centroid")
+hc_euclidea_mcquitty  <- hclust(d = mat_dist, method = "mcquitty")
+cor(x = mat_dist, cophenetic(hc_euclidea_complete))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_average)) ## Tiene la mayor correlación
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_single))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_ward.D2))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_median))
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_centroid)) 
+```
+```{r}
+cor(x = mat_dist, cophenetic(hc_euclidea_mcquitty))
+```
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 2, cex = 0.5,
+          k_colors = c("red", "green"), color_labels_by_k = TRUE,
+          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 2")
+
+```
+```{r}
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"),
+                         method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
+          k_colors = c("red","green","orange"),color_labels_by_k = T,
+          lwd = 0.2,type = "r",label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed") +
+  labs(title = "Herarchical clustering",
+       subtitle = "Distancia euclidea, Average, k=3")
+```
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+
+fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
+          k_colors = c("red", "green", "orange"), color_labels_by_k = TRUE,
+          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 3")
+
+```
+
+
+```{r}
+set.seed(101)
+hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+
+n_groups <- length(unique(hc_euclidea_av$order))
+
+# Definir colores personalizados para 4 clusters
+cluster_colors <- c("red", "green", "blue", "orange")
+
+# Crear vector de colores etiquetados por observación
+label_colors <- rep(cluster_colors, length.out = n_groups)
+
+# Graficar el dendrograma con colores personalizados
+fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
+          lwd = 0.2, type = "c", label_cols = label_colors,
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
+  labs(title = "Hierarchical clustering",
+       subtitle = "Euclidean Distance, Centroid, k = 4")
+
+```
+
+
+
+```{r}
+#Examples
+scale_seitan <- scale(df_seitan[,-1])
+
+### calculate LOF score with a neighborhood of 3 points
+lof <- lof(scale_seitan, minPts = 3)
+
+### distribution of outlier factors
+summary(lof)
+hist(lof, breaks = 10, main = "LOF (minPts = 3)")
+
+### plot sorted lof. Looks like outliers start arounf a LOF of 2.
+plot(sort(lof), type = "l",  main = "LOF (minPts = 3)",
+  xlab = "Points sorted by LOF", ylab = "LOF")
+
+### point size is proportional to LOF and mark points with a LOF > 2
+plot(scale_seitan, pch = ".", main = "LOF (minPts = 3)", asp = 1)
+points(scale_seitan, cex = (lof - 1) * 2, pch = 1, col = "red")
+text(scale_seitan[lof > 2,], labels = round(lof, 1)[lof > 2], pos = 3)
+
+```
+
+```{r}
+library(DMwR2)
+
+# Remove "Species", which is a categorical column
+scale_seitan <- scale(df_seitan[, -1])
+
+outlier.scores <- lofactor(scale_seitan, k = 5)
+
+# Remove observations with missing values
+outlier.scores <- outlier.scores[complete.cases(outlier.scores)]
+
+plot(density(outlier.scores))
+
+```
+```{r}
+outliers <- order(outlier.scores, decreasing=T)[1:5]
+```

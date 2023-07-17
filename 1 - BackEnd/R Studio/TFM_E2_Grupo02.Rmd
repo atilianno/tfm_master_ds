@@ -1,8 +1,9 @@
 ---
 title: "TFM_E2_Grupo02"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 date: "2023-06-08"
 ---
 
@@ -136,10 +137,9 @@ seitan_pca <- PCA(seitan_clean, scale.unit = F, ncp = 6, graph = F)
 ```
 ```{r}
 summary(seitan_pca)
-
 ```
 ```{r}
-fviz_eig(seitan_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions")
+fviz_eig(seitan_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions - Seitan")
 
 ```
 ```{r}
@@ -150,7 +150,7 @@ seitan_b <- cbind(seitan_a, lof_score = seitan_lof)
 
 seitan_lof_visual <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2)) + 
     geom_point(aes(size=lof_score)) +
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution - Seitan")+
     theme_minimal()
 
 seitan_lof_visual
@@ -158,7 +158,6 @@ seitan_lof_visual
 ```
 ```{r}
 summary(seitan_b)
-
 ```
 ```{r}
 seitan_b %>%
@@ -167,22 +166,21 @@ seitan_b %>%
     geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
     scale_fill_manual(values="#8fce00") +
     xlab("LOF Score")+
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution Seitan")+
     theme_minimal() +
     labs(fill="")
 ```
 ```{r}
 quantile(seitan_b$lof_score, probs = c(0, 0.8))
-
 ```
 
 ```{r}
 seitan_b <- seitan_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.3319420, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.3319969, 1, 0))
 
 seitan_lof_visual_b <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution Seitan")+
     theme_minimal()
 
 seitan_lof_visual_b
@@ -193,22 +191,21 @@ nooutliers <- seitan_b[seitan_b$outlier==0,]
 ```
 
 ```{r}
-df_seitan <- df_seitan[seitan_lof < 1.3319420,]
-df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319420,]
-
+df_seitan <- df_seitan[seitan_lof < 1.3319969,]
+df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319969,]
 ```
 
 # Eliminar valores atipicos univariantes
 
 ```{r}
-# remove_outliers <- function(data, column, sd_threshold = 2) {
-#   data[abs(scale(data[[column]])) < sd_threshold, ]
-# }
-# 
-# columns_to_check <- 3:ncol(df_seitan)
-# for (column in columns_to_check) {
-#   df_seitan <- remove_outliers(df_seitan, column)
-# }
+remove_outliers <- function(data, column, sd_threshold = 2) {
+  data[abs(scale(data[[column]])) < sd_threshold, ]
+}
+
+columns_to_check <- 3:ncol(df_seitan)
+for (column in columns_to_check) {
+  df_seitan <- remove_outliers(df_seitan, column)
+}
 ```
 
 
@@ -221,7 +218,7 @@ for (columna in names(df_seitan[columnas_cuantitativas])) {
   plot_data <- df_seitan[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
+    labs(title = paste("Histograma de", columna,"- Seitan"),
          x = columna,
          y = "Frecuencia")
   
@@ -231,7 +228,6 @@ for (columna in names(df_seitan[columnas_cuantitativas])) {
 ```{r}
 summary(as.data.frame(scale(df_seitan[,-1:-2])))
 ```
-
 #Datos normalizados para el Seitán
 
 ```{r}
@@ -244,7 +240,7 @@ for (columna in names(s_seitan[columnas_cuantitativas])) {
   plot_data <- s_seitan[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
+    labs(title = paste("Histograma de", columna,"- Seitan"),
          x = columna,
          y = "Frecuencia")
   
@@ -261,7 +257,7 @@ elbow <- fviz_nbclust(x = s_seitan, FUNcluster = kmeans, method = "wss", k.max =
 print(elbow)
 
 # set.seed(123)
-# km_clusters <- kmeans(x=s_seitan,centers=4,nstart=25)
+# km_clusters <- kmeans(x=s_seitan,centers=4,nstart=50)
 # fviz_cluster(object=km_clusters,data=s_seitan,show.clust.cent = TRUE,
 #              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
 #              pointsize=0.5,outlier.color="darkred") +
@@ -270,34 +266,37 @@ print(elbow)
 #   theme(legend.position = "none")
 
 set.seed(123)
-km_clusters <- kmeans(x = s_seitan, centers = 4, nstart = 25)
+km_clusters <- kmeans(x = s_seitan, centers = 4, nstart = 50)
 
 fviz_cluster(object = km_clusters, data = s_seitan, show.clust.cent = TRUE,
              ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
              pointsize = 0.5, outlier.color = "darkred", geom = "point") +
   theme_bw() +
   theme(legend.position = "none") +
-  ggtitle("Resultados clustering K-means")
+  ggtitle("Resultados clustering K-means Seitan")
 
 set.seed(101)
-heculidea <- hclust(d = dist(x = s_seitan, method = "euclidean"),
-                    method = "complete")
 
-fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
-               sub="Distancia euclídea")+
-        theme(plot.title = element_text(hjust=0.5,size=15))
-require(cluster)
+hc_euclidea_av <- hclust(d = dist(x = s_seitan, method = "euclidean"),
+                         method = "average")
+fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
+          k_colors = c("red","blue","green","magenta"),color_labels_by_k = T,
+          lwd = 0.2,type = "r",label_cols = rainbow(nrow(df_seitan)),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed") +
+  labs(title = "Herarchical clustering Seitan",
+       subtitle = "Distancia euclidea, Average, k=4")
 
 pam.res <- pam(s_seitan, 4)
 # Visualización
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
-  labs(title = "Resultados clustering K-means")+ theme_bw()
+  labs(title = "Resultados clustering K-means superpuestos - Seitan")+ theme_bw()
 ```
+
 # Biplot PCA y K-Means para medir representatividad seitan
 
 ```{r}
-
 # PCA
 pca <- prcomp(df_seitan[,-1:-2], scale=TRUE)
 df_seitan.pca <- pca$x
@@ -312,7 +311,6 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
         axis.line = element_line(colour = "black"),
         legend.key = element_rect(fill = "white"))
 ```
-
 ```{r}
 library(ggplot2)
 
@@ -404,6 +402,38 @@ for(i in 1:4){
 par(op)
 
 ```
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+```{r}
+# Realizar clustering en el dataframe
+set.seed(123)
+df_top <- df_seitan
+km_clusters <- kmeans(x = df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], centers = 4, nstart = 50)
+
+# Obtener las asignaciones de clúster
+cluster_assignments <- km_clusters$cluster
+
+# Agregar las asignaciones de clúster al dataframe
+df_top$cluster <- cluster_assignments
+
+# Inicializar una lista para almacenar los productos más cercanos a cada centroide
+closest_products <- vector("list", max(cluster_assignments))
+
+# Encontrar los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cluster_center <- km_clusters$centers[cluster, ]
+  distances <- apply(df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], 1, function(row) {
+    sum((row - cluster_center)^2)
+  })
+  closest_products[[cluster]] <- head(order(distances), 10)
+}
+
+# Imprimir los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cat("Cluster", cluster, ":\n")
+  print(df_top[closest_products[[cluster]], c("PRODUCT_NAME", "ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")])
+  cat("\n")
+}
+```
 
 ##### TOfu
 
@@ -429,10 +459,10 @@ tofu_pca <- PCA(tofu_clean, scale.unit = F, ncp = 6, graph = F)
 
 ```{r}
 summary(tofu_pca)
-
 ```
+
 ```{r}
-fviz_eig(tofu_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions")
+fviz_eig(tofu_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions TOfu")
 
 ```
 ```{r}
@@ -443,7 +473,7 @@ tofu_b <- cbind(tofu_a, lof_score = tofu_lof)
 
 tofu_lof_visual <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2)) + 
     geom_point(aes(size=lof_score)) +
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution Tofu")+
     theme_minimal()
 
 tofu_lof_visual
@@ -460,7 +490,7 @@ tofu_b %>%
     geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
     scale_fill_manual(values="#8fce00") +
     xlab("LOF Score")+
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution Tofu")+
     theme_minimal() +
     labs(fill="")
 ```
@@ -475,7 +505,7 @@ tofu_b <- tofu_b %>%
 
 tofu_lof_visual_b <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
-  ggtitle("LOF Score Distribution")+
+  ggtitle("LOF Score Distribution Tofu")+
     theme_minimal()
 
 tofu_lof_visual_b
@@ -514,7 +544,7 @@ for (columna in names(df_tofu[columnas_cuantitativas])) {
   plot_data <- df_tofu[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
+    labs(title = paste("Histograma de", columna,"- Tofu"),
          x = columna,
          y = "Frecuencia")
   
@@ -537,7 +567,7 @@ for (columna in names(s_tofu[columnas_cuantitativas])) {
   plot_data <- s_tofu[, columna]
   p <- ggplot(data.frame(x = plot_data), aes(x)) +
     geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-    labs(title = paste("Histograma de", columna),
+    labs(title = paste("Histograma de", columna,"para el Tofu"),
          x = columna,
          y = "Frecuencia")
   
@@ -570,22 +600,24 @@ fviz_cluster(object = km_clusters, data = s_tofu, show.clust.cent = TRUE,
              pointsize = 0.5, outlier.color = "darkred", geom = "point") +
   theme_bw() +
   theme(legend.position = "none") +
-  ggtitle("Resultados clustering K-means")
+  ggtitle("Resultados clustering K-means Tofu")
 
 set.seed(101)
-heculidea <- hclust(d = dist(x = s_tofu, method = "euclidean"),
-                    method = "complete")
-
-fviz_dend(x=heculidea,cex=0.5,main = "Linkage completo",
-               sub="Distancia euclídea")+
-        theme(plot.title = element_text(hjust=0.5,size=15))
-require(cluster)
+hc_euclidea_av <- hclust(d = dist(x = s_tofu, method = "euclidean"),
+                         method = "average")
+fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
+          k_colors = c("red","blue","green","magenta"),color_labels_by_k = T,
+          lwd = 0.2,type = "r",label_cols = rainbow(nrow(df_tofu)),
+          rect_lty = "lightblue") +
+  geom_hline(yintercept = 3.65, linetype = "dashed") +
+  labs(title = "Herarchical clustering Tofu",
+       subtitle = "Distancia euclidea, Average, k=4")
 
 pam.res <- pam(s_tofu, 4)
 # Visualización
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
-  labs(title = "Resultados clustering K-means")+ theme_bw()
+  labs(title = "Resultados clustering K-means Superpuestos Tofu")+ theme_bw()
 ```
 # Biplot PCA y K-Means para medir representatividad tofu
 
@@ -697,15 +729,37 @@ for(i in 1:4){
 par(op)
 
 ```
-# Identificar los productos que están más cerca de cada centroide. Top20
-
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
 ```{r}
-# Calcular el centroide de cada grupo
-df_seitan_pba <- df_seitan[,-1]
-row.names(df_seitan_pba) <- df_seitan_pba$PRODUCT_NAME
-df_seitan_pba <- df_seitan_pba[, -1]
-#km.res <- kmeans(s_seitan, 4, nstart = 25)
-#print(km.res)
+# Realizar clustering en el dataframe
+set.seed(123)
+df_top <- df_tofu
+km_clusters <- kmeans(x = df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], centers = 4, nstart = 50)
+
+# Obtener las asignaciones de clúster
+cluster_assignments <- km_clusters$cluster
+
+# Agregar las asignaciones de clúster al dataframe
+df_top$cluster <- cluster_assignments
+
+# Inicializar una lista para almacenar los productos más cercanos a cada centroide
+closest_products <- vector("list", max(cluster_assignments))
+
+# Encontrar los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cluster_center <- km_clusters$centers[cluster, ]
+  distances <- apply(df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], 1, function(row) {
+    sum((row - cluster_center)^2)
+  })
+  closest_products[[cluster]] <- head(order(distances), 10)
+}
+
+# Imprimir los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cat("Cluster", cluster, ":\n")
+  print(df_top[closest_products[[cluster]], c("PRODUCT_NAME", "ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")])
+  cat("\n")
+}
 ```
 
 
@@ -713,221 +767,330 @@ df_seitan_pba <- df_seitan_pba[, -1]
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Método no jerárquico CLARA basado en simulación y muestreo
-
-# Seitán
-
 ```{r}
-clara_clusters <- clara(x = scale(df_seitan[,-1]), k = 3, metric = "manhattan", stand = TRUE,
-                        samples = 60, pamLike = TRUE)
-clara_clusters$sample
-clara_clusters$medoids
-clara_clusters$i.med
-clara_clusters$clustering
-table(clara_clusters$clustering)
-fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
-             pointsize = 1.5) +  theme_bw() +
-  labs(title = "Resultados clustering CLARA") +
-  theme(legend.position = "none")
-```
+# Aplicar algoritmo Local Outliers Factor para eliminar atípicos
 
-# Tofu
+# 1.- First, we need to convert the incorrect type of variables.
 
-```{r}
-df_tofu <- na.omit(df_tofu)
+soja_clean <- df_soja %>%
+  mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
+str(soja_clean)
 
+soja_clean <- as.data.frame(scale(df_soja[,-1:-2]))
+soja_lof <- lof(soja_clean, minPts = 7)
+head(soja_clean)
 
-clara_clusters <- clara(x = scale(df_tofu[,-1]), k = 3, metric = "manhattan", stand = TRUE,
-                        samples = 60, pamLike = TRUE)
-clara_clusters$sample
-clara_clusters$medoids
-clara_clusters$i.med
-clara_clusters$clustering
-table(clara_clusters$clustering)
-fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
-             pointsize = 1.5) +  theme_bw() +
-  labs(title = "Resultados clustering CLARA") +
-  theme(legend.position = "none")
-```
-# Soja
+#PCA and use the first two dimensions of the PCA
+library(FactoMineR)
+library(factoextra)
 
-```{r}
-clara_clusters <- clara(x = scale(df_soja[,-1]), k = 4, metric = "manhattan", stand = TRUE,
-                        samples = 60, pamLike = TRUE)
-clara_clusters$sample
-clara_clusters$medoids
-clara_clusters$i.med
-clara_clusters$clustering
-table(clara_clusters$clustering)
-fviz_cluster(object = clara_clusters, ellipse.type = "t", geom = "point",
-             pointsize = 1.5) +  theme_bw() +
-  labs(title = "Resultados clustering CLARA") +
-  theme(legend.position = "none")
-```
-
-
-# Métodos de clasificación Jerárquica
-
-```{r}
-datj <- scale(df_seitan[,-1])
-rownames(datj) <- df_seitan[,1]
-# Matriz de distancias euclideas
-mat_dist <- dist(x = datj, method = "euclidean")
-# Dendrogramas con linkage complete y average
-hc_euclidea_complete <- hclust(d = mat_dist, method = "complete")
-hc_euclidea_average  <- hclust(d = mat_dist, method = "average")
-hc_euclidea_single  <- hclust(d = mat_dist, method = "single")
-hc_euclidea_ward.D2  <- hclust(d = mat_dist, method = "ward.D2")
-hc_euclidea_median  <- hclust(d = mat_dist, method = "median")
-hc_euclidea_centroid  <- hclust(d = mat_dist, method = "centroid")
-hc_euclidea_mcquitty  <- hclust(d = mat_dist, method = "mcquitty")
-cor(x = mat_dist, cophenetic(hc_euclidea_complete))
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_average)) ## Tiene la mayor correlación
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_single))
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_ward.D2))
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_median))
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_centroid)) 
-```
-```{r}
-cor(x = mat_dist, cophenetic(hc_euclidea_mcquitty))
+soja_pca <- PCA(soja_clean, scale.unit = F, ncp = 6, graph = F)
 ```
 
 ```{r}
+summary(soja_pca)
+
+```
+```{r}
+fviz_eig(soja_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions - Soja")
+
+```
+```{r}
+library(ggthemes)
+soja_a <- data.frame(soja_pca$ind$coord[,1:3])
+soja_b <- cbind(soja_a, lof_score = soja_lof)
+#soja_b <- cbind(soja_a, fraud = soja_clean$, lof_score = soja_clean$lof)
+
+soja_lof_visual <- ggplot(soja_b, aes(x=Dim.1 ,y=Dim.2)) + 
+    geom_point(aes(size=lof_score)) +
+  ggtitle("LOF Score Distribution - Soja")+
+    theme_minimal()
+
+soja_lof_visual
+
+```
+```{r}
+summary(soja_b)
+
+```
+```{r}
+soja_b %>%
+  filter(lof_score <= 1.75) %>% 
+  ggplot( aes(x=lof_score)) +
+    geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
+    scale_fill_manual(values="#8fce00") +
+    xlab("LOF Score")+
+  ggtitle("LOF Score Distribution - Soja")+
+    theme_minimal() +
+    labs(fill="")
+```
+```{r}
+quantile(soja_b$lof_score, probs = c(0, 0.8))
+
+```
+
+```{r}
+soja_b <- soja_b %>% 
+  mutate(outlier = ifelse(lof_score > 1.4686290, 1, 0))
+
+soja_lof_visual_b <- ggplot(soja_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
+    geom_point() +
+  ggtitle("LOF Score Distribution - Soja")+
+    theme_minimal()
+
+soja_lof_visual_b
+```
+```{r}
+outliers <- soja_b[soja_b$outlier==1,]
+nooutliers <- soja_b[soja_b$outlier==0,]
+```
+
+```{r}
+df_soja <- df_soja[soja_lof < 1.4686290,]
+df_soja_outliers <- df_soja[soja_lof >= 1.4686290,]
+
+```
+
+# Eliminar valores atipicos univariantes
+
+```{r}
+remove_outliers <- function(data, column, sd_threshold = 2) {
+  data[abs(scale(data[[column]])) < sd_threshold, ]
+}
+
+columns_to_check <- 3:ncol(df_soja)
+for (column in columns_to_check) {
+  df_soja <- remove_outliers(df_soja, column)
+}
+```
+
+
+```{r}
+# Obtener las columnas cuantitativas del dataframe
+columnas_cuantitativas <- sapply(df_soja, is.numeric)
+
+# Crear un histograma para cada columna cuantitativa
+for (columna in names(df_soja[columnas_cuantitativas])) {
+  plot_data <- df_soja[, columna]
+  p <- ggplot(data.frame(x = plot_data), aes(x)) +
+    geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
+    labs(title = paste("Histograma de", columna,"- Soja"),
+         x = columna,
+         y = "Frecuencia")
+  
+  print(p)
+}
+```
+```{r}
+summary(as.data.frame(scale(df_soja[,-1:-2])))
+```
+
+#Datos normalizados para el soja
+
+```{r}
+s_soja <- as.data.frame(scale(df_soja[,-1:-2]))
+# Obtener las columnas cuantitativas del dataframe
+columnas_cuantitativas <- sapply(s_soja, is.numeric)
+
+# Crear un histograma para cada columna cuantitativa
+for (columna in names(s_soja[columnas_cuantitativas])) {
+  plot_data <- s_soja[, columna]
+  p <- ggplot(data.frame(x = plot_data), aes(x)) +
+    geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
+    labs(title = paste("Histograma de", columna,"- Soja"),
+         x = columna,
+         y = "Frecuencia")
+  
+  print(p)
+}
+```
+
+```{r}
+s_soja <- scale(df_soja[,-1:-2])
+
+# total de cluster óptimos
+elbow <- fviz_nbclust(x = s_soja, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(s_soja, method = "euclidean"), nstart = 25)
+print(elbow)
+
+# set.seed(123)
+# km_clusters <- kmeans(x=s_soja,centers=4,nstart=25)
+# fviz_cluster(object=km_clusters,data=s_soja,show.clust.cent = TRUE,
+#              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
+#              pointsize=0.5,outlier.color="darkred") +
+#   labs(title ="Resultados clustering K-means") +
+#   theme_bw() +
+#   theme(legend.position = "none")
+
+set.seed(123)
+km_clusters <- kmeans(x = s_soja, centers = 4, nstart = 50)
+
+fviz_cluster(object = km_clusters, data = s_soja, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize = 0.5, outlier.color = "darkred", geom = "point") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle("Resultados clustering K-means - Soja")
+
 set.seed(101)
-hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
-
-n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
-
-fviz_dend(x = hc_euclidea_av, k = 2, cex = 0.5,
-          k_colors = c("red", "green"), color_labels_by_k = TRUE,
-          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
-          rect_lty = "lightblue") +
-  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
-  labs(title = "Hierarchical clustering",
-       subtitle = "Euclidean Distance, Centroid, k = 2")
-
-```
-```{r}
-hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"),
+hc_euclidea_av <- hclust(d = dist(x = s_soja, method = "euclidean"),
                          method = "average")
-
-n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
-
-fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
-          k_colors = c("red","green","orange"),color_labels_by_k = T,
-          lwd = 0.2,type = "r",label_cols = rainbow(n_groups),
+fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
+          k_colors = c("red","blue","green","magenta"),color_labels_by_k = T,
+          lwd = 0.2,type = "r",label_cols = rainbow(nrow(df_soja)),
           rect_lty = "lightblue") +
   geom_hline(yintercept = 3.65, linetype = "dashed") +
-  labs(title = "Herarchical clustering",
-       subtitle = "Distancia euclidea, Average, k=3")
+  labs(title = "Herarchical clustering Soja",
+       subtitle = "Distancia euclidea, Average, k=4")
+
+pam.res <- pam(s_soja, 4)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE)+
+  labs(title = "Resultados clustering K-means superpuesto Soja")+ theme_bw()
+```
+# Biplot PCA y K-Means para medir representatividad soja
+
+```{r}
+
+# PCA
+pca <- prcomp(df_soja[,-1:-2], scale=TRUE)
+df_soja.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df_soja.pca[,1:3], 4)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
 ```
 
 ```{r}
-set.seed(101)
-hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+library(ggplot2)
 
-n_groups <- length(unique(hc_euclidea_av$order))  # Obtener el número de grupos en el dendrograma
+# Obtener los centroides de cada clúster
+centroids <- as.data.frame(km_clusters$centers)
 
-fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
-          k_colors = c("red", "green", "orange"), color_labels_by_k = TRUE,
-          lwd = 0.2, type = "c", label_cols = rainbow(n_groups),
-          rect_lty = "lightblue") +
-  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
-  labs(title = "Hierarchical clustering",
-       subtitle = "Euclidean Distance, Centroid, k = 3")
 
+# Obtener el valor mínimo y máximo en el dataframe
+min_value <- min(centroids, na.rm = TRUE)
+max_value <- max(centroids, na.rm = TRUE)
+
+# Escalar los datos entre 0 y 1
+scaled_df <- (centroids - min_value) / (max_value - min_value)
+
+library(fmsb)
+
+
+# Define the variable ranges: maximum and minimum
+max_min <- data.frame(
+  ENERGY_100G = c(1, 0), FAT_100G = c(1, 0), CARBOHYDRATES_100G = c(1, 0),PROTEINS_100G = c(1, 0)
+)
+rownames(max_min) <- c("Max", "Min")
+
+# Bind the variable ranges to the data
+df <- rbind(max_min, scaled_df)
+```
+
+```{r}
+create_beautiful_radarchart <- function(data, color = "#00AFBB", 
+                                        vlabels = colnames(data), vlcex = 0.7,
+                                        caxislabels = NULL, title = NULL, ...){
+  radarchart(
+    data, axistype = 1,
+    # Customize the polygon
+    pcol = color, pfcol = scales::alpha(color, 0.3), plwd = 2, plty = 1,
+    # Customize the grid
+    cglcol = "grey", cglty = 1, cglwd = 0.8,
+    # Customize the axis
+    axislabcol = "grey", 
+    # Variable labels
+    vlcex = vlcex, vlabels = vlabels,
+    caxislabels = caxislabels, title = title, ...
+  )
+}
+```
+
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 1))
+create_beautiful_radarchart(df, caxislabels = c(0, .25, .5, .75, 1))
+par(op)
+```
+```{r}
+# Reduce plot margin using par()
+op <- par(mar = c(1, 2, 2, 2))
+# Create the radar charts
+create_beautiful_radarchart(
+  data = df, caxislabels = c(0, .25, .5, .75, 1),
+  color = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B")
+)
+# Add an horizontal legend
+legend(
+  x = "bottom", legend = rownames(df[-c(1,2),]), horiz = TRUE,
+  bty = "n", pch = 20 , col = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B"),
+  text.col = "black", cex = 1, pt.cex = 1.5
+  )
+par(op)
 ```
 
 
 ```{r}
-set.seed(101)
-hc_euclidea_av <- hclust(d = dist(x = datj, method = "euclidean"), method = "average")
+# Define colors and titles
+colors <- c("#00AFBB", "#E7B800", "#FC4E07","blue")
+titles <- c("1", "2", "3","4")
 
-n_groups <- length(unique(hc_euclidea_av$order))
+# Reduce plot margin using par()
+# Split the screen in 3 parts
+op <- par(mar = c(1, 1, 1, 1))
 
-# Definir colores personalizados para 4 clusters
-cluster_colors <- c("red", "green", "blue", "orange")
+par(mfrow = c(1,4))
 
-# Crear vector de colores etiquetados por observación
-label_colors <- rep(cluster_colors, length.out = n_groups)
-
-# Graficar el dendrograma con colores personalizados
-fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
-          lwd = 0.2, type = "c", label_cols = label_colors,
-          rect_lty = "lightblue") +
-  geom_hline(yintercept = 3.65, linetype = "dashed", color = "blue") +
-  labs(title = "Hierarchical clustering",
-       subtitle = "Euclidean Distance, Centroid, k = 4")
+# Create the radar chart
+for(i in 1:4){
+  create_beautiful_radarchart(
+    data = df[c(1, 2, i+2), ], caxislabels = c(0, .25, .5, .75, 1),
+    color = colors[i], title = titles[i]
+    )
+}
+par(op)
 
 ```
 
-
-
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
 ```{r}
-#Examples
-scale_seitan <- scale(df_seitan[,-1])
+# Realizar clustering en el dataframe
+set.seed(123)
+df_top <- df_soja
+km_clusters <- kmeans(x = df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], centers = 4, nstart = 50)
 
-### calculate LOF score with a neighborhood of 3 points
-lof <- lof(scale_seitan, minPts = 3)
+# Obtener las asignaciones de clúster
+cluster_assignments <- km_clusters$cluster
 
-### distribution of outlier factors
-summary(lof)
-hist(lof, breaks = 10, main = "LOF (minPts = 3)")
+# Agregar las asignaciones de clúster al dataframe
+df_top$cluster <- cluster_assignments
 
-### plot sorted lof. Looks like outliers start arounf a LOF of 2.
-plot(sort(lof), type = "l",  main = "LOF (minPts = 3)",
-  xlab = "Points sorted by LOF", ylab = "LOF")
+# Inicializar una lista para almacenar los productos más cercanos a cada centroide
+closest_products <- vector("list", max(cluster_assignments))
 
-### point size is proportional to LOF and mark points with a LOF > 2
-plot(scale_seitan, pch = ".", main = "LOF (minPts = 3)", asp = 1)
-points(scale_seitan, cex = (lof - 1) * 2, pch = 1, col = "red")
-text(scale_seitan[lof > 2,], labels = round(lof, 1)[lof > 2], pos = 3)
+# Encontrar los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cluster_center <- km_clusters$centers[cluster, ]
+  distances <- apply(df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], 1, function(row) {
+    sum((row - cluster_center)^2)
+  })
+  closest_products[[cluster]] <- head(order(distances), 10)
+}
 
+# Imprimir los productos más cercanos a cada centroide
+for (cluster in 1:max(cluster_assignments)) {
+  cat("Cluster", cluster, ":\n")
+  print(df_top[closest_products[[cluster]], c("PRODUCT_NAME", "ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")])
+  cat("\n")
+}
 ```
 
-```{r}
-library(DMwR2)
-
-# Remove "Species", which is a categorical column
-scale_seitan <- scale(df_seitan[, -1])
-
-outlier.scores <- lofactor(scale_seitan, k = 5)
-
-# Remove observations with missing values
-outlier.scores <- outlier.scores[complete.cases(outlier.scores)]
-
-plot(density(outlier.scores))
-
-```
-```{r}
-outliers <- order(outlier.scores, decreasing=T)[1:5]
-```
 
