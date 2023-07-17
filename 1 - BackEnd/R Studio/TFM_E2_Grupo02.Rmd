@@ -38,6 +38,7 @@ library(ggthemes)
 df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v7.csv', sep=','))
 ```
 
+
 # Selecciona columnas a investigar y Elimina registros duplicados
 
 ```{r}
@@ -74,10 +75,23 @@ cantidad_ceros_por_columna <- colSums(df_nuevo == 0)
 
 print(cantidad_ceros_por_columna)
 ```
+```{r}
+# ver <- df_nuevo[,"PRODUCT_NAME"]
+# ver2<-as.data.frame(table(ver))
+# duplicados <- duplicated(ver)
+# 
+# # Filtrar el dataframe original para mostrar solo las filas duplicadas
+# dataframe_duplicados <- df_nuevo[duplicados, ]
+# dataframe_duplicados <- dataframe_duplicados[,"PRODUCT_NAME"]
+# 
+# VER3 <- as.data.frame(subset(dataframe_duplicados, !duplicated(dataframe_duplicados)))
+
+```
+
 # Aplicar filtros negativos
 ```{r}
 # Crear un vector con las palabras a buscar
-palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA", "GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA")
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAIN SOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA")
 
 # Crear una función que verifica si alguna de las palabras está presente en el texto
 verificar_palabras <- function(texto, palabras) {
@@ -193,6 +207,12 @@ nooutliers <- seitan_b[seitan_b$outlier==0,]
 ```{r}
 df_seitan <- df_seitan[seitan_lof < 1.3319969,]
 df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319969,]
+```
+# ELIMINAR ATIPICOS MULTIVARIANTES CON DBSCAN
+```{r}
+# ELIMINAR ATIPICOS MULTIVARIANTES
+# lof_scores <- lof(df_seitan[c("ENERGY_100G","PROTEINS_100G", "CARBOHYDRATES_100G", "FAT_100G")], minPts = 6)
+# df_seitan <- df_seitan[lof_scores <= 1,]
 ```
 
 # Eliminar valores atipicos univariantes
@@ -402,6 +422,17 @@ for(i in 1:4){
 par(op)
 
 ```
+```{r}
+# Create the radar chart
+for(i in 1:4){
+  create_beautiful_radarchart(
+    data = df[c(1, 2, i+2), ], caxislabels = c(0, .25, .5, .75, 1),
+    color = colors[i], title = titles[i],
+    width = 5, height = 5, mar = c(0, 0, 0, 0)
+  )
+}
+```
+
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
 ```{r}
 # Realizar clustering en el dataframe
@@ -501,7 +532,7 @@ quantile(tofu_b$lof_score, probs = c(0, 0.8))
 
 ```{r}
 tofu_b <- tofu_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.2822731, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.2815631, 1, 0))
 
 tofu_lof_visual_b <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -831,7 +862,7 @@ quantile(soja_b$lof_score, probs = c(0, 0.8))
 
 ```{r}
 soja_b <- soja_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.4686290, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.485425, 1, 0))
 
 soja_lof_visual_b <- ggplot(soja_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -846,8 +877,8 @@ nooutliers <- soja_b[soja_b$outlier==0,]
 ```
 
 ```{r}
-df_soja <- df_soja[soja_lof < 1.4686290,]
-df_soja_outliers <- df_soja[soja_lof >= 1.4686290,]
+df_soja <- df_soja[soja_lof < 1.485425,]
+df_soja_outliers <- df_soja[soja_lof >= 1.485425,]
 
 ```
 
