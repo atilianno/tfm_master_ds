@@ -4,7 +4,7 @@ output:
   html_document: default
   word_document: default
   pdf_document: default
-date: "2023-08-22"
+date: "2023-08-18"
 ---
 
 # ###############################################################################
@@ -33,9 +33,6 @@ library(FactoMineR)
 library(factoextra)
 library(ggthemes)
 library(fmsb)
-library(SCORPIUS)
-library(scatterplot3d)
-library(dbscan)
 ```
 
 # ###############################################################################
@@ -73,22 +70,8 @@ limpiar_dataframe <- function(df) {
   
   # Omitir NA
   df_nuevo <- na.omit(df_nuevo)
-  
-  # Elimina registros duplicados
-  df_nuevo <- subset(df_nuevo, !duplicated(df_nuevo))
 
   return(df_nuevo)
-}
-################################################################################
-# Local Outlier Factor (LOF)
-################################################################################
-
-eliminar_outliers_lof <- function(df, k, threshold) {
-  
-  lof_scores <- lof(df, k = k)
-  df_lof <- cbind(df, lof_score = lof_scores)
-  df_clean <- subset(df_lof, lof_score <= threshold)
-  return(df_clean)
 }
 
 ################################################################################
@@ -100,9 +83,7 @@ escalar_dataframe <- function(df) {
   df_nuevo <- df %>%
   mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
   
-  #df_nuevo <- as.data.frame(scale(df[,-1:-2]))
-  df_nuevo <- df_nuevo[,-1:-2] %>%
-  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
+  df_nuevo <- as.data.frame(scale(df[,-1:-2]))
   
   return(df_nuevo)
 }
@@ -161,9 +142,9 @@ obtener_cuantiles <- function(data, porcentaje) {
     
   # Extraer los cuantiles
   cuantil_0 <- resultado_quantile["0%"]
-  cuantil_1 <- resultado_quantile[porcentaje_str]
+  cuantil_80 <- resultado_quantile[porcentaje_str]
   
-  return(list(cuantil_0 = cuantil_0, cuantil_1 = cuantil_1))
+  return(list(cuantil_0 = cuantil_0, cuantil_80 = cuantil_80))
 }
 
 ################################################################################
@@ -185,31 +166,7 @@ columnas_cuantitativas <- function(df) {
   return(columnas)
 }
 
-################################################################################
-# Función para Aplicar filtros negativos
-################################################################################
-
-# Crear una función que verifica si alguna de las palabras está presente en el texto
-verificar_palabras <- function(texto, palabras) {
-  sapply(palabras, function(palabra) grepl(palabra, texto))
-}
-
-filtro_negativo <- function(df, palabras_a_eliminar) {
-
-  # Identificar las filas que contienen alguna de las palabras a eliminar
-  filas_a_eliminar <- apply(df, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
-  
-  # Eliminar las filas identificadas del dataframe original
-  df_nuevo1 <- df[!filas_a_eliminar, ]
-  
-  #Elimino los faltantes
-  df_nuevo1 <- df_nuevo1[complete.cases(df_nuevo1), ]
-  
-  return(df_nuevo1)
-}
-
 ```
-
 
 # ###############################################################################
 # FUNCIONES GRÁFICOS
@@ -300,17 +257,6 @@ graf_histogramas <- function(df, producto) {
     
     print(p)
   }
-}
-
-################################################################################
-# Función para gráficos "DOSPERSIÓN 3D"
-################################################################################
-
-dispersion_3d <- function(df1, df2, df3, column1, column2, column3, producto){
-  
-scatterplot3d(df1, df2, df3,
-              xlab = column1, ylab = column2, zlab = column3,
-              main = producto)
 }
 ```
 
@@ -548,49 +494,8 @@ top10_clusters <- function(df, n_clusters){
     print(df_top[closest_products[[cluster]], c("PRODUCT_NAME", "ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G", "SUGARS_100G", "SALT_100G")])
     cat("\n")
   }
+  
 }
-```
-
-# ###############################################################################
-# ###############################################################################
-# CARGA DATOS
-# ###############################################################################
-# ###############################################################################
-
-
-```{r, echo = FALSE, warning = FALSE}
-################################################################################
-# Carga de datos
-################################################################################
-df_seitan_all_vars <- data.frame(read.csv2('seitan.csv', sep=','))
-df_tofu_all_vars <- data.frame(read.csv2('tofu.csv', sep=','))
-df_soja_all_vars <- data.frame(read.csv2('soja.csv', sep=','))
-
-################################################################################
-# Limpiar Dataframe
-################################################################################
-
-df_seitan <- limpiar_dataframe(df_seitan_all_vars)
-seitan_clean <- escalar_dataframe(df_seitan)
-
-df_tofu <- limpiar_dataframe(df_tofu_all_vars)
-tofu_clean <- escalar_dataframe(df_tofu)
-
-df_soja <- limpiar_dataframe(df_soja_all_vars)
-soja_clean <- escalar_dataframe(df_soja)
-
-
-# Crear un vector con las palabras a buscar
-
-palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI")
-
-df_seitan <- filtro_negativo(df_seitan, palabras_a_eliminar)
-df_tofu <- filtro_negativo(df_tofu, palabras_a_eliminar)
-df_soja <- filtro_negativo(df_soja, palabras_a_eliminar)
-
-df_seitan <- na.omit(df_seitan)
-df_tofu <- na.omit(df_tofu)
-df_soja <- na.omit(df_soja)
 ```
 
 
@@ -600,7 +505,22 @@ df_soja <- na.omit(df_soja)
 # ###############################################################################
 # ###############################################################################
 
+
 ```{r, echo = FALSE, warning = FALSE}
+
+################################################################################
+# Carga de datos
+################################################################################
+
+df_seitan_all_vars <- data.frame(read.csv2('seitan.csv', sep=','))
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+
+df_seitan <- limpiar_dataframe(df_seitan_all_vars)
+seitan_clean <- escalar_dataframe(df_seitan)
+
 # LOF
 seitan_lof <- LOF_dataframe(seitan_clean)
 
@@ -618,7 +538,7 @@ seitan_quantiles_vars <- obtener_cuantiles(seitan_lof_score, seitan_probabilidad
 
 # Ahora 'quantiles_vars' es una lista con los cuantiles
 seitan_cuantil_1 <- seitan_quantiles_vars$cuantil_0
-seitan_cuantil_2 <- seitan_quantiles_vars$cuantil_1
+seitan_cuantil_2 <- seitan_quantiles_vars$cuantil_80
 
 # DATAFRAMES outliers
 
@@ -629,7 +549,9 @@ df_seitan_outliers <- df_seitan[seitan_lof >= seitan_cuantil_2,]
 seitan_lof_score <- escalar_dataframe_CUANTIL(seitan_lof_score, seitan_cuantil_2)
 
 # Eliminar valores atipicos univariantes
+
 columns_to_check_seitan <- 3:ncol(df_seitan)
+
 for (column_seitan in columns_to_check_seitan) {
   df_seitan <- remove_outliers(df_seitan, column_seitan)
 }
@@ -641,7 +563,6 @@ df_seitan <- na.omit(df_seitan)
 # ###############################################################################
 # ANÁLISIS DATOS
 # ###############################################################################
-              
 
 ```{r, echo = FALSE, warning = FALSE}
 
@@ -666,6 +587,7 @@ graf_distribucion_densidad_LOF(seitan_lof_score, "seitan")
 graf_distribucion_OUTLIERS_LOF(seitan_lof_score, "seitan")
 ```
 
+
 ```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_seitan, "- seitan")
 ```
@@ -673,26 +595,8 @@ graf_histogramas(df_seitan, "- seitan")
 ```{r, echo = FALSE, warning = FALSE}
 #Datos normalizados para el seitan
 df_seitan_normalizado <- escalar_dataframe(df_seitan)
-```
 
-
-```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_seitan_normalizado, "- seitan [NORMALIZADO]")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Crear el gráfico de dispersión en 3D
-
-dispersion_3d(df_seitan_normalizado$PROTEINS_100G, df_seitan_normalizado$FAT_100G, df_seitan_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
-
-dispersion_3d(df_seitan_normalizado$SALT_100G, df_seitan_normalizado$ENERGY_100G, df_seitan_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_100G", "SUGARS_100G", "seitan")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_seitan, "seitan_final.csv", row.names = FALSE)
 ```
 
 # ###############################################################################
@@ -733,33 +637,7 @@ df_seitan_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
-# Identificar filas con índices que contienen "Max" o "Min"
-indices_a_eliminar_seitan_cluster <- grep("Max|Min", rownames(df_seitan_min_max))
-
-# Eliminar esas filas
-df_centroides_seitan <- df_seitan_min_max[-indices_a_eliminar_seitan_cluster, ]
-
-# Verificar el DataFrame resultante
-print(df_centroides_seitan)
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_centroides_seitan, "seitan_centroides.csv", row.names = FALSE)
-```
-
-
-
-```{r, echo = FALSE, warning = FALSE}
 graf_radarchart(df_seitan_min_max)
-```
-```{r}
-source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/clustergram.r")
-
-data(iris)
-set.seed(250)
-par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(df_seitan[,3:6]) # notice I am scaling the vectors)
-clustergram(Data, k.range = 2:8, line.width = 0.004) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
-
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
@@ -780,6 +658,19 @@ top10_clusters(df_seitan, n_clusters_seitan)
 
 ```{r, echo = FALSE, warning = FALSE}
 
+################################################################################
+# Carga de datos
+################################################################################
+
+df_tofu_all_vars <- data.frame(read.csv2('tofu.csv', sep=','))
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+
+df_tofu <- limpiar_dataframe(df_tofu_all_vars)
+tofu_clean <- escalar_dataframe(df_tofu)
+
 # LOF
 tofu_lof <- LOF_dataframe(tofu_clean)
 
@@ -797,7 +688,7 @@ tofu_quantiles_vars <- obtener_cuantiles(tofu_lof_score, tofu_probabilidad)
 
 # Ahora 'quantiles_vars' es una lista con los cuantiles
 tofu_cuantil_1 <- tofu_quantiles_vars$cuantil_0
-tofu_cuantil_2 <- tofu_quantiles_vars$cuantil_1
+tofu_cuantil_2 <- tofu_quantiles_vars$cuantil_80
 
 # DATAFRAMES outliers
 
@@ -858,21 +749,6 @@ df_tofu_normalizado <- escalar_dataframe(df_tofu)
 graf_histogramas(df_tofu_normalizado, "- tofu [NORMALIZADO]")
 ```
 
-```{r, echo = FALSE, warning = FALSE}
-
-# Crear el gráfico de dispersión en 3D
-
-dispersion_3d(df_tofu_normalizado$PROTEINS_100G, df_tofu_normalizado$FAT_100G, df_tofu_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "tofu")
-
-dispersion_3d(df_tofu_normalizado$SALT_100G, df_tofu_normalizado$ENERGY_100G, df_tofu_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_100G", "SUGARS_100G", "tofu")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_tofu, "tofu_final.csv", row.names = FALSE)
-```
-
 # ###############################################################################
 # CLUSTERS
 # ###############################################################################
@@ -911,21 +787,6 @@ df_tofu_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
-# Identificar filas con índices que contienen "Max" o "Min"
-indices_a_eliminar_tofu_cluster <- grep("Max|Min", rownames(df_tofu_min_max))
-
-# Eliminar esas filas
-df_centroides_tofu <- df_tofu_min_max[-indices_a_eliminar_tofu_cluster, ]
-
-# Verificar el DataFrame resultante
-print(df_centroides_tofu)
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_centroides_tofu, "tofu_centroides.csv", row.names = FALSE)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
 graf_radarchart(df_tofu_min_max)
 ```
 
@@ -947,6 +808,19 @@ top10_clusters(df_tofu, n_clusters_tofu)
 
 ```{r, echo = FALSE, warning = FALSE}
 
+################################################################################
+# Carga de datos
+################################################################################
+
+df_soja_all_vars <- data.frame(read.csv2('soja.csv', sep=','))
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+
+df_soja <- limpiar_dataframe(df_soja_all_vars)
+soja_clean <- escalar_dataframe(df_soja)
+
 # LOF
 soja_lof <- LOF_dataframe(soja_clean)
 
@@ -964,7 +838,7 @@ soja_quantiles_vars <- obtener_cuantiles(soja_lof_score, soja_probabilidad)
 
 # Ahora 'quantiles_vars' es una lista con los cuantiles
 soja_cuantil_1 <- soja_quantiles_vars$cuantil_0
-soja_cuantil_2 <- soja_quantiles_vars$cuantil_1
+soja_cuantil_2 <- soja_quantiles_vars$cuantil_80
 
 # DATAFRAMES outliers
 
@@ -1025,21 +899,6 @@ df_soja_normalizado <- escalar_dataframe(df_soja)
 graf_histogramas(df_soja_normalizado, "- soja [NORMALIZADO]")
 ```
 
-```{r, echo = FALSE, warning = FALSE}
-
-# Crear el gráfico de dispersión en 3D
-
-dispersion_3d(df_soja_normalizado$PROTEINS_100G, df_soja_normalizado$FAT_100G, df_soja_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
-
-dispersion_3d(df_soja_normalizado$SALT_100G, df_soja_normalizado$ENERGY_100G, df_soja_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_100G", "SUGARS_100G", "soja")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_soja, "soja_final.csv", row.names = FALSE)
-```
-
 # ###############################################################################
 # CLUSTERS
 # ###############################################################################
@@ -1078,21 +937,6 @@ df_soja_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
-# Identificar filas con índices que contienen "Max" o "Min"
-indices_a_eliminar_soja_cluster <- grep("Max|Min", rownames(df_soja_min_max))
-
-# Eliminar esas filas
-df_centroides_soja <- df_soja_min_max[-indices_a_eliminar_soja_cluster, ]
-
-# Verificar el DataFrame resultante
-print(df_centroides_soja)
-
-# Exportar el DataFrame a un archivo CSV
-write.csv(df_centroides_soja, "soja_centroides.csv", row.names = FALSE)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
 graf_radarchart(df_soja_min_max)
 ```
 
@@ -1103,25 +947,5 @@ graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), n_clusters_soja)
 ```{r, echo = FALSE, warning = FALSE}
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
 top10_clusters(df_soja, n_clusters_soja)
-```
-
-
-
-```{r}
-#source("https://www.r-statistics.com/wp-content/uploads/2012/01/source_https.r.txt") # Making sure we can source code from github
-#source_https("https://raw.github.com/talgalili/R-code-snippets/master/clustergram.r")
-source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/clustergram.r")
-
-data(iris)
-set.seed(250)
-par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(iris[,-5]) # notice I am scaling the vectors)
-clustergram(Data, k.range = 2:8, line.width = 0.004) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
-
-```
-
-
-```{r}
-ver <-df_seitan[,3:6]
 ```
 

@@ -4,10 +4,10 @@ output:
   word_document: default
   pdf_document: default
   html_document: default
-date: "2023-06-08"
+date: "2023-08-18"
 ---
 
-```{r}
+```{r setup, include=FALSE}
 library(dplyr)
 library(factoextra)
 library(ggplot2)
@@ -23,168 +23,149 @@ library(car)
 library(simstudy)
 library(data.table)
 library(corrr)
-#install.packages("dbscan")
 library(dbscan)
 library(DMwR2)
 library(FactoMineR)
 library(factoextra)
 library(ggthemes)
+library(fmsb)
 library(SCORPIUS)
-
 ```
 
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Función para preparar y limpiar DataFrames
+################################################################################
+
+limpiar_dataframe <- function(df) {
+  
+  # Seleccionar columnas de interés
+  df <- df[,c("ISO3","PRODUCT_NAME","ENERGY_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G")]
+
+  # Eliminar registros duplicados
+  df <- subset(df, !duplicated(df))
+
+  # Convertir a numérico
+  PRODUCT_NAME <- df[,"PRODUCT_NAME"]
+  ISO3 <- df[,"ISO3"]
+
+  df_nuevo <- df %>%
+    mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
+    select_if(is.numeric)
+
+  df_nuevo <- cbind(ISO3, PRODUCT_NAME, df_nuevo)
+
+  # Eliminar filas con suma de columnas numéricas igual a 0
+  suma_columnas <- rowSums(df_nuevo[,3:ncol(df_nuevo)])
+  df_nuevo <- cbind(df_nuevo, suma = suma_columnas)
+  df_nuevo <- subset(df_nuevo, suma != 0)
+  df_nuevo <- df_nuevo[, -which(names(df_nuevo) == "suma")]
+  
+  df_nuevo <- na.omit(df_nuevo)
+  
+  return(df_nuevo)
+}
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Cargamos los datos
+################################################################################
+
+df_soja_before <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+df_seitan_before <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/seitan.csv', sep=','))
+df_tofu_before <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/tofu.csv', sep=','))
+
+################################################################################
+# Limpiar Dataframes
+################################################################################
+
+df_soja <- limpiar_dataframe(df_soja_before)
+
+df_seitan <- limpiar_dataframe(df_seitan_before)
+
+df_tofu <- limpiar_dataframe(df_tofu_before)
+
+################################################################################
+# Frecuencia de productos por país de orígen
+################################################################################
+
+print(table(df_seitan$ISO3))
+print(table(df_tofu$ISO3))
+print(table(df_soja$ISO3))
+```
 ```{r}
-#cargamos los datos con las variables que nos interesan
-#df1 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v3.csv', sep=','))
-#df2 = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos_vegan.csv', sep=','))
-df = data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/alimentos v8.csv', sep=','))
-```
-
-
-# Selecciona columnas a investigar y Elimina registros duplicados
-
-```{r}
-df <- df[,c("ISO3","PRODUCT_NAME","ENERGY_100G","PROTEINS_100G","FAT_100G","CARBOHYDRATES_100G")]
-#df <- df[,c("PRODUCT_NAME","PROTEINS_100G","CARBOHYDRATES_100G","FAT_100G")]
-# Elimina registros duplicados
-df <- subset(df, !duplicated(df))
-
-```
-
-```{r}
-PRODUCT_NAME <- df[,"PRODUCT_NAME"]
-ISO3 <- df[,"ISO3"]
- #Convertir a numerico todo
-df_nuevo <- df %>%
-  mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
-  select_if(is.numeric)
-PRODUCT_NAME <- df[,"PRODUCT_NAME"]
-df_nuevo <- cbind(ISO3,PRODUCT_NAME,df_nuevo)
-```
-
-# Eliminar vectores fila nulos
-```{r}
-# Sumar las columnas del dataframe
-suma_columnas <- rowSums(df_nuevo[,3:ncol(df_nuevo)])
-
-# Agregar la variable de suma al dataframe
-df_nuevo <- cbind(df_nuevo, suma = suma_columnas)
-
-df_nuevo <- subset(df_nuevo, suma != 0)
-df_nuevo <- df_nuevo[, -which(names(df_nuevo) == "suma")]
-
-cantidad_ceros_por_columna <- colSums(df_nuevo == 0)
-
-print(cantidad_ceros_por_columna)
-```
-# Eliminar registros nulos para cada macronutriente
-```{r}
- df_nuevo[df_nuevo==0] <- NA
- df_nuevo<-df_nuevo[complete.cases(df_nuevo),]
-```
-
-```{r}
-# ver <- df_nuevo[,"PRODUCT_NAME"]
-# ver2<-as.data.frame(table(ver))
-# duplicados <- duplicated(ver)
-# 
-# # Filtrar el dataframe original para mostrar solo las filas duplicadas
-# dataframe_duplicados <- df_nuevo[duplicados, ]
-# dataframe_duplicados <- dataframe_duplicados[,"PRODUCT_NAME"]
-# 
-# VER3 <- as.data.frame(subset(dataframe_duplicados, !duplicated(dataframe_duplicados)))
-
-```
-
 # Aplicar filtros negativos
-```{r}
+
 # Crear un vector con las palabras a buscar
-palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI")
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAIN SOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI")
 
 # Crear una función que verifica si alguna de las palabras está presente en el texto
 verificar_palabras <- function(texto, palabras) {
   sapply(palabras, function(palabra) grepl(palabra, texto))
 }
 # Identificar las filas que contienen alguna de las palabras a eliminar
-filas_a_eliminar <- apply(df_nuevo, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
+filas_a_eliminar <- apply(df_seitan, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
 
 # Eliminar las filas identificadas del dataframe original
-df_nuevo1 <- df_nuevo[!filas_a_eliminar, ]
+df_seitan <- df_seitan[!filas_a_eliminar, ]
 #df_nuevo2 <- df_nuevo1[,-1]
 
 #Elimino los faltantes
-df_nuevo1 <- df_nuevo1[complete.cases(df_nuevo1), ]
-
+df_seitan <- df_seitan[complete.cases(df_seitan), ]
 ```
 
 ```{r}
-#f_soja <- subset(df_nuevo1, grepl("soja", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "soja"
-# df_soja <- na.omit(df_soja)
+PRODUCT_NAME <- df_seitan[,"PRODUCT_NAME"]
+ISO3 <- df_seitan[,"ISO3"]
+
+#Convertir a numerico todo
+df_nuevo <- df_seitan %>%
+  mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
+  select_if(is.numeric)
 
 
+df_seitan <- subset(df_seitan, !duplicated(df_seitan))
 
-df_seitan <- subset(df_nuevo1, grepl("seitan", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "seitan"
-df_seitan <- na.omit(df_seitan)
+df_nuevo <- df_nuevo %>%
+  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
 
-
-df_tofu <- subset(df_nuevo1, grepl("tofu", PRODUCT_NAME, ignore.case = TRUE)) ## Registros que contienen la palabra "tofu"
-df_tofu <- na.omit
+df_seitan <- cbind(ISO3,PRODUCT_NAME,df_nuevo)
 
 ```
 
-# Frecuencia de productos por país de orígen
-```{r}
-print(table(df_seitan$ISO3))
-print(table(df_tofu$ISO3))
-print(table(df_soja$ISO3))
-```
+
+################################################################################
+################################################################################
 # SEITAN
+################################################################################
+################################################################################
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
 # Aplicar algoritmo Local Outliers Factor para eliminar atípicos
+################################################################################
 
-# 1.- First, we need to convert the incorrect type of variables.
+# Convertir el tipo incorrecto de variables.
 
 seitan_clean <- df_seitan %>%
   mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
 str(seitan_clean)
 
-
-df_seitan_n <- df_seitan[,-1:-2] %>%
-  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
-
 seitan_clean <- as.data.frame(scale(df_seitan[,-1:-2]))
-seitan_lof <- lof(seitan_clean, minPts = 40)
-head(seitan_clean)
+seitan_lof <- lof(seitan_clean, minPts = 25)
 
-#PCA and use the first two dimensions of the PCA
-library(FactoMineR)
-library(factoextra)
-
+# PCA y use las dos primeras dimensiones del PCA
 seitan_pca <- PCA(seitan_clean, scale.unit = F, ncp = 6, graph = F)
 
-```
-```{r}
-# Cargar la librería scatterplot3d
-library(scatterplot3d)
-#"PROTEINS_100G","FAT_100G","CARBOHYDRATES_100G"
-# Crear el gráfico de dispersión en 3D
-scatterplot3d(seitan_clean$PROTEINS_100G, seitan_clean$FAT_100G, seitan_clean$CARBOHYDRATES_100G,
-              xlab = "PROTEINS_100G", ylab = "FAT_100G", zlab = "CARBOHYDRATES_100G",
-              main = "Seitan")
+fviz_eig(seitan_pca, ncp = 6, addlabels = T, main = "Varianza explicada por cada dimensión - Seitán")
 ```
 
-```{r}
-summary(seitan_pca)
-```
-```{r}
-fviz_eig(seitan_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions - Seitan")
-
-```
-Dado que las observaciones atípicas pueden ser un problema para algunos métodos de análisis de conglomerados, su identificación antes de aplicarlos suele ser muy útil.
 
 ```{r}
-library(ggthemes)
+
 seitan_a <- data.frame(seitan_pca$ind$coord[,1:3])
 seitan_b <- cbind(seitan_a, lof_score = seitan_lof)
 #seitan_b <- cbind(seitan_a, fraud = seitan_clean$, lof_score = seitan_clean$lof)
@@ -212,12 +193,12 @@ seitan_b %>%
     labs(fill="")
 ```
 ```{r}
-quantile(seitan_b$lof_score, probs = c(0, 0.95))
+quantile(seitan_b$lof_score, probs = c(0, 0.9))
 ```
 
 ```{r}
 seitan_b <- seitan_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.2190062, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.5753956, 1, 0))
 
 seitan_lof_visual_b <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -232,8 +213,8 @@ nooutliers <- seitan_b[seitan_b$outlier==0,]
 ```
 
 ```{r}
-df_seitan <- df_seitan[seitan_lof < 1.2190062,]
-df_seitan_outliers <- df_seitan[seitan_lof >= 1.2190062,]
+df_seitan <- df_seitan[seitan_lof < 1.3319969,]
+df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319969,]
 ```
 
 # Eliminar valores atipicos univariantes
@@ -297,15 +278,6 @@ elbow <- fviz_nbclust(x = s_seitan, FUNcluster = kmeans, method = "wss", k.max =
              diss = get_dist(s_seitan, method = "euclidean"), nstart = 25)
 print(elbow)
 
-# set.seed(123)
-# km_clusters <- kmeans(x=s_seitan,centers=4,nstart=50)
-# fviz_cluster(object=km_clusters,data=s_seitan,show.clust.cent = TRUE,
-#              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
-#              pointsize=0.5,outlier.color="darkred") +
-#   labs(title ="Resultados clustering K-means") +
-#   theme_bw() +
-#   theme(legend.position = "none")
-
 set.seed(123)
 km_clusters <- kmeans(x = s_seitan, centers = 3, nstart = 50)
 
@@ -326,7 +298,7 @@ fviz_dend(x = hc_euclidea_av, k = 3, cex = 0.5,
           rect_lty = "lightblue") +
   geom_hline(yintercept = 3.65, linetype = "dashed") +
   labs(title = "Herarchical clustering Seitan",
-       subtitle = "Distancia euclidea, Average, k=4")
+       subtitle = "Distancia euclidea, Average, k=3")
 
 pam.res <- pam(s_seitan, 3)
 # Visualización
@@ -335,12 +307,19 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
   labs(title = "Resultados clustering K-means superpuestos - Seitan")+ theme_bw()
 ```
 ```{r}
-library(philentropy)
-a <- km_clusters$centers[1,]
-b <- km_clusters$centers[2,]
-x <- rbind(a,b)
-print(distance(x, method = "euclidean"))
+#ver <- as.data.frame(km_clusters$)
+set.seed(123)
+df_top <- df_seitan
+km_clusters <- kmeans(x = df_top[, c("ENERGY_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G")], centers = 3, nstart = 50)
 
+# Obtener las asignaciones de clúster
+cluster_assignments <- km_clusters$cluster
+
+# Agregar las asignaciones de clúster al dataframe
+df_top$cluster <- cluster_assignments
+
+# Inicializar una lista para almacenar los productos más cercanos a cada centroide
+closest_products <- vector("list", max(cluster_assignments))
 ```
 
 # Biplot PCA y K-Means para medir representatividad seitan
@@ -361,11 +340,8 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
         legend.key = element_rect(fill = "white"))
 ```
 ```{r}
-library(ggplot2)
-
 # Obtener los centroides de cada clúster
 centroids <- as.data.frame(km_clusters$centers)
-
 
 # Obtener el valor mínimo y máximo en el dataframe
 min_value <- min(centroids, na.rm = TRUE)
@@ -373,9 +349,6 @@ max_value <- max(centroids, na.rm = TRUE)
 
 # Escalar los datos entre 0 y 1
 scaled_df <- (centroids - min_value) / (max_value - min_value)
-
-library(fmsb)
-
 
 # Define the variable ranges: maximum and minimum
 max_min <- data.frame(
@@ -494,9 +467,11 @@ for (cluster in 1:max(cluster_assignments)) {
   cat("\n")
 }
 ```
-
+################################################################################
+################################################################################
 ##### TOfu
-
+################################################################################
+################################################################################
 ```{r}
 # Aplicar algoritmo Local Outliers Factor para eliminar atípicos
 
@@ -506,19 +481,11 @@ tofu_clean <- df_tofu %>%
   mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
 str(tofu_clean)
 
-
-df_tofu_n <- df_tofu[,-1:-2] %>%
-  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
-
-
 tofu_clean <- as.data.frame(scale(df_tofu[,-1:-2]))
-tofu_lof <- lof(tofu_clean, minPts = 40)
+tofu_lof <- lof(tofu_clean, minPts = 7)
 head(tofu_clean)
 
 #PCA and use the first two dimensions of the PCA
-library(FactoMineR)
-library(factoextra)
-
 tofu_pca <- PCA(tofu_clean, scale.unit = F, ncp = 6, graph = F)
 ```
 
@@ -528,13 +495,10 @@ summary(tofu_pca)
 
 ```{r}
 fviz_eig(tofu_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions TOfu")
-
 ```
 ```{r}
-library(ggthemes)
 tofu_a <- data.frame(tofu_pca$ind$coord[,1:3])
 tofu_b <- cbind(tofu_a, lof_score = tofu_lof)
-#tofu_b <- cbind(tofu_a, fraud = tofu_clean$, lof_score = tofu_clean$lof)
 
 tofu_lof_visual <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2)) + 
     geom_point(aes(size=lof_score)) +
@@ -561,12 +525,11 @@ tofu_b %>%
 ```
 ```{r}
 quantile(tofu_b$lof_score, probs = c(0, 0.8))
-
 ```
 
 ```{r}
 tofu_b <- tofu_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.2282977, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.2815631, 1, 0))
 
 tofu_lof_visual_b <- ggplot(tofu_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -704,8 +667,6 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
 ```
 
 ```{r}
-library(ggplot2)
-
 # Obtener los centroides de cada clúster
 centroids <- as.data.frame(km_clusters$centers)
 
@@ -716,8 +677,6 @@ max_value <- max(centroids, na.rm = TRUE)
 
 # Escalar los datos entre 0 y 1
 scaled_df <- (centroids - min_value) / (max_value - min_value)
-
-library(fmsb)
 
 
 # Define the variable ranges: maximum and minimum
@@ -826,11 +785,11 @@ for (cluster in 1:max(cluster_assignments)) {
   cat("\n")
 }
 ```
-
-
+################################################################################
+################################################################################
 #### SOja
-
-
+################################################################################
+################################################################################
 
 ```{r}
 # Aplicar algoritmo Local Outliers Factor para eliminar atípicos
@@ -841,17 +800,11 @@ soja_clean <- df_soja %>%
   mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
 str(soja_clean)
 
-df_soja_n <- df_soja[,-1:-2] %>%
-  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
-
 soja_clean <- as.data.frame(scale(df_soja[,-1:-2]))
 soja_lof <- lof(soja_clean, minPts = 7)
 head(soja_clean)
 
 #PCA and use the first two dimensions of the PCA
-library(FactoMineR)
-library(factoextra)
-
 soja_pca <- PCA(soja_clean, scale.unit = F, ncp = 6, graph = F)
 ```
 
@@ -859,12 +812,14 @@ soja_pca <- PCA(soja_clean, scale.unit = F, ncp = 6, graph = F)
 summary(soja_pca)
 
 ```
+
+
 ```{r}
 fviz_eig(soja_pca, ncp = 6, addlabels = T, main = "Variance explained by each dimensions - Soja")
-
 ```
+
+
 ```{r}
-library(ggthemes)
 soja_a <- data.frame(soja_pca$ind$coord[,1:3])
 soja_b <- cbind(soja_a, lof_score = soja_lof)
 #soja_b <- cbind(soja_a, fraud = soja_clean$, lof_score = soja_clean$lof)
@@ -881,6 +836,8 @@ soja_lof_visual
 summary(soja_b)
 
 ```
+
+
 ```{r}
 soja_b %>%
   filter(lof_score <= 1.75) %>% 
@@ -892,6 +849,8 @@ soja_b %>%
     theme_minimal() +
     labs(fill="")
 ```
+
+
 ```{r}
 quantile(soja_b$lof_score, probs = c(0, 0.8))
 
@@ -908,6 +867,8 @@ soja_lof_visual_b <- ggplot(soja_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) +
 
 soja_lof_visual_b
 ```
+
+
 ```{r}
 outliers <- soja_b[soja_b$outlier==1,]
 nooutliers <- soja_b[soja_b$outlier==0,]
@@ -949,6 +910,8 @@ for (columna in names(df_soja[columnas_cuantitativas])) {
   print(p)
 }
 ```
+
+
 ```{r}
 summary(as.data.frame(scale(df_soja[,-1:-2])))
 ```
@@ -980,15 +943,6 @@ s_soja <- scale(df_soja[,-1:-2])
 elbow <- fviz_nbclust(x = s_soja, FUNcluster = kmeans, method = "wss", k.max = 15, 
              diss = get_dist(s_soja, method = "euclidean"), nstart = 25)
 print(elbow)
-
-# set.seed(123)
-# km_clusters <- kmeans(x=s_soja,centers=4,nstart=25)
-# fviz_cluster(object=km_clusters,data=s_soja,show.clust.cent = TRUE,
-#              ellipse.type="euclid",star.plot=TRUE,repel=TRUE,
-#              pointsize=0.5,outlier.color="darkred") +
-#   labs(title ="Resultados clustering K-means") +
-#   theme_bw() +
-#   theme(legend.position = "none")
 
 set.seed(123)
 km_clusters <- kmeans(x = s_soja, centers = 4, nstart = 50)
@@ -1037,7 +991,6 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
 ```
 
 ```{r}
-library(ggplot2)
 
 # Obtener los centroides de cada clúster
 centroids <- as.data.frame(km_clusters$centers)
@@ -1049,9 +1002,6 @@ max_value <- max(centroids, na.rm = TRUE)
 
 # Escalar los datos entre 0 y 1
 scaled_df <- (centroids - min_value) / (max_value - min_value)
-
-library(fmsb)
-
 
 # Define the variable ranges: maximum and minimum
 max_min <- data.frame(
@@ -1160,5 +1110,3 @@ for (cluster in 1:max(cluster_assignments)) {
   cat("\n")
 }
 ```
-
-
