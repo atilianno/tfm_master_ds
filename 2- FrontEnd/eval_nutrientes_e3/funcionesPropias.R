@@ -28,7 +28,7 @@ encontrar_cercano_cluster <- function(TIPO_PRODUCTO, DT_CARBOHYDRATES_100G, DT_P
     centroides <- fromJSON("centroides_tofu.json")
   }
   if(TIPO_PRODUCTO == "seitan") {
-    max_min <- fromJSON("max_min.json")
+    max_min <- fromJSON("max_min_seitan.json")
     centroides <- fromJSON("centroides_seitan.json")
   }
   
