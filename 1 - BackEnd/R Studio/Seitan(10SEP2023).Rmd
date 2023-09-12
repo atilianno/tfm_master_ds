@@ -1,0 +1,422 @@
+---
+title: "TFM_E2_Grupo02"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2023-08-22"
+---
+
+# ###############################################################################
+# PREPARAR ENTORNO DE TRABAJO
+# ###############################################################################
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(factoextra)
+library(ggplot2)
+library(cluster)
+library(tidyverse)
+library(ggcorrplot)
+library(writexl)
+library(openxlsx)
+library(PerformanceAnalytics)
+library(corrplot)
+library(ggplot2)
+library(car)
+library(simstudy)
+library(data.table)
+library(corrr)
+library(dbscan)
+library(DMwR2)
+library(FactoMineR)
+library(factoextra)
+library(ggthemes)
+library(fmsb)
+library(SCORPIUS)
+library(scatterplot3d)
+library(dbscan)
+library(plotly)
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA FUNCIONES
+# ###############################################################################
+# ###############################################################################
+```{r}
+# Cargar funciones
+source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/funciones.R")
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA DATOS
+# ###############################################################################
+# ###############################################################################
+
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Carga de datos
+################################################################################
+df_seitan_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/seitan.csv', sep=','))
+df_tofu_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/tofu.csv', sep=','))
+df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+
+
+# Crear un vector con las palabras a buscar
+
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI","THE SOUP VILLAGE SESAME SOY SOUP","ORGANIC SOYBEAN FETTUCCINE")
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+```
+
+
+# ###############################################################################
+# ###############################################################################
+# SEITAN
+# ###############################################################################
+# ###############################################################################
+
+```{r}
+df_seitan <- limpiar_dataframe(df_seitan_all_vars)
+df_seitan <- filtro_negativo(df_seitan, palabras_a_eliminar)
+df_seitan <- na.omit(df_seitan)
+df_seitan <- df_seitan[,-7:-8]
+seitan_clean <- escalar_dataframe(df_seitan)
+```
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL SEITAN
+# ###############################################################################
+
+```{r}
+# Aplica la función para eliminar valores atípicos por columna aplicando el rango intercuartílico
+#nuevo_dataframe <- eliminar_atipicos_por_columna(df_seitan[,-1:-2])
+#nuevo_dataframe1 <- eliminar_atipicos_por_columna(seitan_clean)
+
+#df_seitan <- df_seitan[complete.cases(nuevo_dataframe), ]
+#seitan_clean <- seitan_clean[complete.cases(nuevo_dataframe1), ]
+```
+
+
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_seitan[,4:6],col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+boxplot(seitan_clean,col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_seitan[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_seitan[,4:6],col = colores, main = "Macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+dispersion_3d(seitan_clean$PROTEINS_100G, seitan_clean$FAT_100G, seitan_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(df,
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# LOF
+puntos <- 50
+seitan_lof <- LOF_dataframe(seitan_clean,puntos)
+
+# PCA
+seitan_pca <- PCA_dataframe(seitan_clean)
+
+# LOFT SCORE
+seitan_lof_score <- LOF_SCORE_dataframe(seitan_pca, seitan_lof, seitan_clean)
+
+# corte quantil
+seitan_probabilidad <- 0.9
+
+# quantiles
+seitan_quantiles_vars <- obtener_cuantiles(seitan_lof_score, seitan_probabilidad)
+
+# Ahora 'quantiles_vars' es una lista con los cuantiles
+seitan_cuantil_1 <- seitan_quantiles_vars$cuantil_0
+seitan_cuantil_2 <- seitan_quantiles_vars$cuantil_1
+
+# DATAFRAMES outliers
+
+df_seitan <- df_seitan[seitan_lof < seitan_cuantil_2,]
+df_seitan_outliers <- df_seitan[seitan_lof >= seitan_cuantil_2,]
+
+# Escalar DATAFRAME - Cuantil
+seitan_lof_score <- escalar_dataframe_CUANTIL(seitan_lof_score, seitan_cuantil_2)
+
+# Eliminar valores atipicos univariantes
+#columns_to_check_seitan <- 3:ncol(df_seitan)
+#for (column_seitan in columns_to_check_seitan) {
+#  df_seitan <- remove_outliers(df_seitan, column_seitan)
+#}
+
+# Omitir NA
+df_seitan <- na.omit(df_seitan)
+```
+
+# ###############################################################################
+# ANÁLISIS DATOS
+# ###############################################################################
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_var_explicada_pca(seitan_pca, "seitan")
+
+```
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+summary(seitan_lof_score)
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_densidad_LOF(seitan_lof_score, "seitan")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_distribucion_OUTLIERS_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_seitan[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
+
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
+
+```{r, echo = FALSE, warning = FALSE}
+graf_histogramas(df_seitan, "- seitan")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+#Datos normalizados para el seitan
+df_seitan_normalizado <- escalar_dataframe(df_seitan)
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_histogramas(df_seitan_normalizado, "- seitan [NORMALIZADO]")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+
+# Crear el gráfico de dispersión en 3D
+
+dispersion_3d(df_seitan_normalizado$PROTEINS_100G, df_seitan_normalizado$FAT_100G, df_seitan_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+
+#dispersion_3d(df_seitan_normalizado$SALT_100G, df_seitan_normalizado$ENERGY_KCAL_100G, df_seitan_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "seitan")
+```
+
+# ###############################################################################
+# CLUSTERS
+# ###############################################################################
+
+```{r, echo = FALSE, warning = FALSE}
+# total de cluster óptimos
+graf_cluster_optimos(df_seitan_normalizado)
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+# Número de clusters
+n_clusters_seitan <- 3
+# Definir una paleta de colores personalizada
+set.seed(123)
+cluster_colors <- c("#66BD63","red","orange")
+seitan_kms_clusters <- clustering_kmeans(df_seitan_normalizado, n_clusters_seitan)
+graf_clustering_kmeans(df_seitan_normalizado, seitan_kms_clusters, "seitan")
+```
+```{r, echo = FALSE, warning = FALSE}
+seitan_euclidean_clusters <- clustering_euclidean(df_seitan_normalizado, n_clusters_seitan)
+graf_clustering_euclidean(df_seitan_normalizado, n_clusters_seitan, "seitan", seitan_euclidean_clusters)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+clustering_kmeans_SUPERPUESTO(df_seitan_normalizado, n_clusters_seitan, "seitan")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+cluster_colors <- c("red","#66BD63","orange")
+#cluster_colors <- c("black","black","black")
+# Biplot PCA y K-Means para medir representatividad
+PCA_CLUSTER_KMEANS(df_seitan_normalizado, n_clusters_seitan)
+```
+```{r}
+#uno
+fviz_nbclust(x = df_seitan_normalizado, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(df_seitan_normalizado, method = "euclidean"), nstart = 50)
+#dos
+d2f=data.frame(df_seitan_normalizado)
+km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
+# Las funciones del paquete factoextra emplean el nombre de las filas del
+# dataframe que contiene los datos como identificador de las observaciones.
+# Esto permite añadir labels a los gráficos.
+fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize=0.5,outlier.color="darkred", geom = "point",
+             palette = cluster_colors) +
+  theme_bw() +
+  theme(legend.position = "right")+
+  labs(title = "Resultados clustering K-means")
+#tres
+require(cluster)
+pam.res <- pam(d2f, 3)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE,palette = cluster_colors)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+#cuatro
+data(iris)
+# PCA
+pca <- prcomp(df_seitan_normalizado)
+df_seitan_normalizado.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df_seitan_normalizado.pca[,1:3], 3)
+  fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = cluster_colors) +
+    labs(color=NULL) + ggtitle("") +
+    theme(text = element_text(size = 12),
+          panel.background = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          legend.key = element_rect(fill = "white"))
+```
+
+```{r, echo = FALSE, warning = FALSE}
+df_seitan_min_max <- centroides_clustering(seitan_kms_clusters)
+df_seitan_min_max
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart(df_seitan_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart_clusters(df_seitan_min_max, c("1", "2", "3"), n_clusters_seitan)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+top10_clusters(df_seitan, n_clusters_seitan)
+```
+```{r}
+#calculo de la densidad calorica
+df_seitan$densidad_calorica <- df_seitan$ENERGY_KCAL_100 / 100
+df_seitan$scoring_densidad_calorica <- df_seitan$densidad_calorica/max(df_seitan$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_seitan$densidad_nutricional <-  (df_seitan$FAT_100G+df_seitan$CARBOHYDRATES_100G+df_seitan$PROTEINS_100G)/df_seitan$ENERGY_KCAL_100G*100
+df_seitan$scoring_densidad_nutricional <- df_seitan$densidad_nutricional/max(df_seitan$densidad_nutricional)*100
+
+#calculo de la relacion entre densidades
+df_seitan$relacion <- df_seitan$scoring_densidad_nutricional/df_seitan$scoring_densidad_calorica
+```
+
+
+```{r}
+cluster <- seitan_kms_clusters$cluster
+df_seitan <- cbind(df_seitan,cluster)
+tabla_frecuencia <- table(df_seitan$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_seitan <- subset(df_seitan, df_seitan$cluster == 1)
+summary(cluster1_seitan)
+```
+```{r}
+cluster2_seitan <- subset(df_seitan, df_seitan$cluster == 2)
+summary(cluster2_seitan)
+```
+```{r}
+cluster3_seitan <- subset(df_seitan, df_seitan$cluster == 3)
+summary(cluster3_seitan)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_seitan[,-1], aes(df_seitan$scoring_densidad_nutricional, df_seitan$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster - Seitán",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```

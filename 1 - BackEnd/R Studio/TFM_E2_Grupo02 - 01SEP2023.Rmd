@@ -37,526 +37,16 @@ library(SCORPIUS)
 library(scatterplot3d)
 library(dbscan)
 library(plotly)
-
 ```
 
 # ###############################################################################
-# FUNCIONES PROCESAR DATOS
 # ###############################################################################
-
-```{r, echo = FALSE, warning = FALSE}
-################################################################################
-# Función para preparar y limpiar DataFrames
-################################################################################
-
-limpiar_dataframe <- function(df) {
-  
-  # Seleccionar columnas de interés
-  df <- df[,c("ISO3","PRODUCT_NAME","ENERGY_KCAL_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G", "SUGARS_100G", "SALT_100G")]
-
-  # Eliminar registros duplicados
-  df <- subset(df, !duplicated(df))
-
-  # Convertir a numérico
-  PRODUCT_NAME <- df[,"PRODUCT_NAME"]
-  ISO3 <- df[,"ISO3"]
-
-  df_nuevo <- df %>%
-    mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
-    select_if(is.numeric)
-
-  df_nuevo <- cbind(ISO3, PRODUCT_NAME, df_nuevo)
-
-  # Eliminar filas con suma de columnas numéricas igual a 0
-  suma_columnas <- rowSums(df_nuevo[,3:ncol(df_nuevo)])
-  df_nuevo <- cbind(df_nuevo, suma = suma_columnas)
-  df_nuevo <- subset(df_nuevo, suma != 0)
-  df_nuevo <- df_nuevo[, -which(names(df_nuevo) == "suma")]
-  
-  # Omitir NA
-  df_nuevo <- na.omit(df_nuevo)
-  
-  # Elimina registros duplicados
-  df_nuevo <- subset(df_nuevo, !duplicated(df_nuevo))
-
-  return(df_nuevo)
-}
-################################################################################
-# Local Outlier Factor (LOF)
-################################################################################
-
-eliminar_outliers_lof <- function(df, k, threshold) {
-  
-  lof_scores <- lof(df, k = k)
-  df_lof <- cbind(df, lof_score = lof_scores)
-  df_clean <- subset(df_lof, lof_score <= threshold)
-  return(df_clean)
-}
-
-################################################################################
-# Función para normalizar DataFrames
-################################################################################
-
-escalar_dataframe <- function(df) {
-  
-  df_nuevo <- df %>%
-  mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
-  
-  #df_nuevo <- as.data.frame(scale(df[,-1:-2]))
-  df_nuevo <- df_nuevo[,-1:-2] %>%
-  mutate_all(~ (.-min(.)) / (max(.) - min(.)))
-  
-  return(df_nuevo)
-}
-
-escalar_dataframe_CUANTIL <- function(df, cuantil) {
-
-  df_nuevo <- df %>% 
-    mutate(outlier = ifelse(lof_score > cuantil, 1, 0))
-
- return(df_nuevo)
-}
-
-################################################################################
-# Función para PCA
-################################################################################
-
-PCA_dataframe <- function(df) {
-  
-  df_nuevo <- PCA(df, scale.unit = F, ncp = 6, graph = F)
-  
-  return(df_nuevo)
-}
-
-################################################################################
-# Función para LOF
-################################################################################
-
-LOF_dataframe <- function(df) {
-  
-  df_nuevo <- lof(df, minPts = 25)
-  
-  return(df_nuevo)
-}
-
-################################################################################
-# Función para loft score
-################################################################################
-
-LOF_SCORE_dataframe <- function(df_pca, df_lof, df_clean) {
-  
-  df_nuevo_before <- data.frame(df_pca$ind$coord[,1:3])
-  df_nuevo <- cbind(df_nuevo_before, lof_score = df_lof)
-  #df_nuevo <- cbind(df_nuevo_before, fraud = df_clean$, lof_score = df_clean$lof)
-  
-  return(df_nuevo)
-}
-
-################################################################################
-# Función para obtener cuantiles específicos
-################################################################################
-
-obtener_cuantiles <- function(data, porcentaje) {
-  
-  resultado_quantile <- quantile(data$lof_score, probs = c(0, porcentaje))
-  porcentaje_str <- paste0(as.character(porcentaje*100),"%")
-    
-  # Extraer los cuantiles
-  cuantil_0 <- resultado_quantile["0%"]
-  cuantil_1 <- resultado_quantile[porcentaje_str]
-  
-  return(list(cuantil_0 = cuantil_0, cuantil_1 = cuantil_1))
-}
-
-################################################################################
-# Función para remover outliers
-################################################################################
-
-remove_outliers <- function(data, column, sd_threshold = 2) {
-  data[abs(scale(data[[column]])) < sd_threshold, ]
-}
-
-################################################################################
-# Función para Obtener las columnas cuantitativas del dataframe
-################################################################################
-
-columnas_cuantitativas <- function(df) {
-  
-  columnas <- sapply(df, is.numeric)
-  
-  return(columnas)
-}
-
-################################################################################
-# Función para Aplicar filtros negativos
-################################################################################
-
-# Crear una función que verifica si alguna de las palabras está presente en el texto
-verificar_palabras <- function(texto, palabras) {
-  sapply(palabras, function(palabra) grepl(palabra, texto))
-}
-
-filtro_negativo <- function(df, palabras_a_eliminar) {
-
-  # Identificar las filas que contienen alguna de las palabras a eliminar
-  filas_a_eliminar <- apply(df, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
-  
-  # Eliminar las filas identificadas del dataframe original
-  df_nuevo1 <- df[!filas_a_eliminar, ]
-  
-  #Elimino los faltantes
-  df_nuevo1 <- df_nuevo1[complete.cases(df_nuevo1), ]
-  
-  return(df_nuevo1)
-}
-
-```
-
-
+# CARGA FUNCIONES
 # ###############################################################################
-# FUNCIONES GRÁFICOS
 # ###############################################################################
-
-```{r, echo = FALSE, warning = FALSE}
-
-################################################################################
-# Funcion de gráfico "Distribución LOF Score"
-################################################################################
-
-graf_distribucion_LOF <- function(df, producto) {
-  
-  titulo <- paste0("Distribución LOF Score - ", producto)
-  
-  distribucion <- ggplot(df, aes(x=Dim.1 ,y=Dim.2)) + 
-    geom_point(aes(size=lof_score)) +
-  ggtitle(titulo) +
-    theme_minimal()
-
-  distribucion
-}
-
-################################################################################
-# Funcion de gráfico "Distribución LOF Score"
-################################################################################}
-
-graf_distribucion_OUTLIERS_LOF <- function(df, producto) {
-  
-  titulo <- paste0("Distribución LOF Score - [OUTLIERS] ", producto)
-  
-  lof_visual_lof_score <- ggplot(df, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
-      geom_point() +
-    ggtitle(titulo)+
-      theme_minimal()
-  
-  lof_visual_lof_score
-}
-
-################################################################################
-# Funcion de gráfico "Distribución LOF Score"
-################################################################################
-
-graf_distribucion_densidad_LOF <- function(df, producto) {
-  
-  titulo <- paste0("Distribución LOF Score [DENSIDAD] - ", producto)
-  
-  df %>%
-  filter(lof_score <= 1.75) %>% 
-  ggplot( aes(x=lof_score)) +
-    geom_density( color="#e9ecef", fill = "#c90076", alpha=0.7) +
-    scale_fill_manual(values="#8fce00") +
-    xlab("LOF Score")+
-  ggtitle(titulo)+
-    theme_minimal() +
-    labs(fill="")
-}
-
-################################################################################
-# Funcion de gráfico "Varianza explicada por cada dimensión"
-################################################################################
-
-graf_var_explicada_pca <- function(df, producto) {
-  
-  titulo <- paste0("Varianza explicada por cada dimensión [PCA] - ", producto)
-  
-  fviz_eig(df, ncp = 6, addlabels = T, main = titulo)
-}
-
-################################################################################
-# Función para gráficos "HISTOGRAMAS"
-################################################################################
-
-graf_histogramas <- function(df, producto) {
-    
-  # Obtener las columnas cuantitativas del dataframe
-  columnas_cuantitativas <- columnas_cuantitativas(df)
-  
-  # Crear un histograma para cada columna cuantitativa
-  for (columna in names(df[columnas_cuantitativas])) {
-    plot <- df[, columna]
-    
-    p <- ggplot(data.frame(x = plot), aes(x)) +
-      geom_histogram(binwidth = 0.5, fill = "steelblue", color = "white") +
-      labs(title = paste("Histograma de", columna, producto),
-           x = columna,
-           y = "Frecuencia")
-    
-    print(p)
-  }
-}
-
-################################################################################
-# Función para gráficos "DOSPERSIÓN 3D"
-################################################################################
-
-dispersion_3d <- function(df1, df2, df3, column1, column2, column3, producto){
-  
-scatterplot3d(df1, df2, df3,
-              xlab = column1, ylab = column2, zlab = column3,
-              main = producto)
-}
-
-```
-
 ```{r}
-#Clustergrama
-source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/clustergram.r")
-```
-
-# ###############################################################################
-# FUNCIONES CLUSTER
-# ###############################################################################
-
-```{r, echo = FALSE, warning = FALSE}
-
-colores = c("#00AFBB", "#E7B800", "#FC4E07","#7A378B", "#Ac9E11","#7C7899")
-
-################################################################################
-# Funcion de gráfico "Elbow"
-################################################################################
-
-graf_cluster_optimos <- function(df) {
-  
-  elbow <- fviz_nbclust(x = df, FUNcluster = kmeans, method = "wss",
-                               k.max = 15, diss = get_dist(df, method = "euclidean"), 
-                               nstart = 25)
-  print(elbow)
-}
-
-################################################################################
-# Funcion de CLUSTERING "KMEANS"
-################################################################################
-
-clustering_kmeans <- function(df, n_clusters) {
-  
-  set.seed(123)
-  km_clusters <- kmeans(x = df, centers = n_clusters, nstart = 50)
-  
-  return(km_clusters)
-  
-}
-
-graf_clustering_kmeans <- function(df, km_clusters, producto) {
-  
-  titulo <- paste0("Resultados clustering K-means ", producto)
-  
-  fviz_cluster(object = km_clusters, data = df, show.clust.cent = TRUE,
-               ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
-               pointsize = 0.5, outlier.color = "darkred", geom = "point") +
-    theme_bw() +
-    theme(legend.position = "none") +
-    ggtitle(titulo)
-}
-
-################################################################################
-# Funcion de CLUSTERING "EUCLIDEAN"
-################################################################################
-
-clustering_euclidean <- function(df, n_clusters) {
-  
-  set.seed(101)
-  
-  hc_euclidea_av <- hclust(d = dist(x = df, method = "euclidean"),
-                           method = "average")
-  
-  return(hc_euclidea_av)
-}
-
-graf_clustering_euclidean <- function(df, n_clusters, producto, hc_euclidea_av) {
-  
-  titulo <- paste0("clustering Jerárquico ", producto)
-  subtitulo <- paste0("Distancia euclidea Promedio, k=", n_clusters)
-  
-  fviz_dend(x = hc_euclidea_av, k = n_clusters, cex = 0.5,
-            k_colors = c("red","blue","green","magenta", "brown"),color_labels_by_k = T,
-            lwd = 0.2,type = "r",label_cols = rainbow(nrow(df)),
-            rect_lty = "lightblue") +
-    geom_hline(yintercept = 3.65, linetype = "dashed") +
-    labs(title = titulo,
-         subtitle = subtitulo)
-}
-
-################################################################################
-# Funcion de CLUSTERING "KMEANS SUPERPUESTO"
-################################################################################
-
-clustering_kmeans_SUPERPUESTO <- function(df, n_clusters, producto) {
-  
-  titulo <- paste0("Resultados clustering K-means superpuestos - ", producto)
-  
-  pam.res <- pam(df, n_clusters)
-  
-  # Visualización
-  fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
-               show.clust.cent = TRUE,star.plot = TRUE)+
-    labs(title = titulo)+ theme_bw()
-}
-
-################################################################################
-# Funcion de GRÁFICO "KMEANS Y PCA"
-################################################################################
-
-PCA_CLUSTER_KMEANS <- function(df, n_clusters) {
-
-# PCA
-pca<- prcomp(df, scale=FALSE)
-df.pca <- pca$x
-
-# Cluster over the three first PCA dimensions
-kc <- kmeans(df.pca, n_clusters)
-
-fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
-  labs(color=NULL) + ggtitle("") +
-  theme(text = element_text(size = 12),
-        panel.background = element_blank(), 
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black"),
-        legend.key = element_rect(fill = "white"))
-}
-
-################################################################################
-# Funcion para OBTENER CENTROIDES
-################################################################################
-
-centroides_clustering <- function(clusters) {
-  
-  # Obtener los centroides de cada clúster
-  centroids <- as.data.frame(clusters$centers)
-  
-  # Obtener el valor mínimo y máximo en el dataframe
-  min_value <- min(centroids, na.rm = TRUE)
-  max_value <- max(centroids, na.rm = TRUE)
-  
-  # Escalar los datos entre 0 y 1
-  scaled_df <- (centroids - min_value) / (max_value - min_value)
-  
-  # Define the variable ranges: maximum and minimum
-  max_min <- data.frame(
-    ENERGY_KCAL_100G = c(1, 0), FAT_100G = c(1, 0), CARBOHYDRATES_100G = c(1, 0),PROTEINS_100G = c(1, 0), 
-    SUGARS_100G = c(1, 0), SALT_100G = c(1, 0)
-  )
-  rownames(max_min) <- c("Max", "Min")
-  
-  # Bind the variable ranges to the data
-  df_min_max <- rbind(max_min, scaled_df)
-  
-  return(df_min_max)
-}
-
-################################################################################
-# Función para gráficos "radar chart"
-################################################################################
-
-create_beautiful_radarchart <- function(data, color = "#00AFBB", 
-                                        vlabels = colnames(data), vlcex = 0.7,
-                                        caxislabels = NULL, title = NULL, ...){
-  radarchart(
-    data, axistype = 1,
-    
-    # Customize the polygon
-    pcol = color, pfcol = scales::alpha(color, 0.3), plwd = 2, plty = 1,
-    
-    # Customize the grid
-    cglcol = "grey", cglty = 1, cglwd = 0.8,
-    
-    # Customize the axis
-    axislabcol = "grey", 
-    
-    # Variable labels
-    vlcex = vlcex, vlabels = vlabels,
-    caxislabels = caxislabels, title = title, ...
-    
-  )
-}
-
-graf_radarchart <- function(df){
-  # Reduce plot margin using par()
-  op_full <- par(mar = c(1, 2, 2, 2))
-  
-  # Create the radar charts
-  create_beautiful_radarchart(
-    data = df, caxislabels = c(0, .25, .5,.75, 1),
-    color = colores
-  )
-  
-  # Add an horizontal legend
-  legend(
-    x = "bottom", legend = rownames(df[-c(1,2),]), horiz = TRUE,
-    bty = "n", pch = 20 , col = colores,
-    text.col = "black", cex = 1, pt.cex = 1.5
-    )
-  par(op_full)
-}
-
-graf_radarchart_clusters <- function(df, titles, n_clusters){
-  
-  # Create the radar chart
-  for(i in 1:n_clusters){
-    create_beautiful_radarchart(
-      data = df[c(1, 2, i+2), ], caxislabels = c(0, .25, .5, .75, 1),
-      color = colores[i], title = titles[i],
-      width = 5, height = 5, mar = c(0, 0, 0, 0)
-    )
-  }
-}
-
-################################################################################
-# Función para 
-# "top10 productos más cercanos al centroide que representan cada cluster"
-################################################################################
-
-top10_clusters <- function(df, n_clusters){
-  
-  # Realizar clustering en el dataframe
-  set.seed(123)
-  df_top <- df
-  km_clusters <- kmeans(x = df_top[, c("ENERGY_KCAL_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G", "SUGARS_100G", "SALT_100G")], centers = n_clusters, nstart = 50)
-  
-  # Obtener las asignaciones de clúster
-  cluster_assignments <- km_clusters$cluster
-  
-  # Agregar las asignaciones de clúster al dataframe
-  df_top$cluster <- cluster_assignments
-  
-  # Inicializar una lista para almacenar los productos más cercanos a cada centroide
-  closest_products <- vector("list", max(cluster_assignments))
-  
-  # Encontrar los productos más cercanos a cada centroide
-  for (cluster in 1:max(cluster_assignments)) {
-    cluster_center <- km_clusters$centers[cluster, ]
-    distancedf_normalizado <- apply(df_top[, c("ENERGY_KCAL_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G", "SUGARS_100G", "SALT_100G")], 1, function(row) {
-      sum((row - cluster_center)^2)
-    })
-    closest_products[[cluster]] <- head(order(distancedf_normalizado), 10)
-  }
-  
-  # Imprimir los productos más cercanos a cada centroide
-  for (cluster in 1:max(cluster_assignments)) {
-    cat("Cluster", cluster, ":\n")
-    print(df_top[closest_products[[cluster]], c("PRODUCT_NAME", "ENERGY_KCAL_100G", "FAT_100G", "CARBOHYDRATES_100G", "PROTEINS_100G", "SUGARS_100G", "SALT_100G")])
-    cat("\n")
-  }
-}
+# Cargar funciones
+source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/funciones.R")
 ```
 
 # ###############################################################################
@@ -574,31 +64,14 @@ df_seitan_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documento
 df_tofu_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/tofu.csv', sep=','))
 df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
 
-################################################################################
-# Limpiar Dataframe
-################################################################################
-
-df_seitan <- limpiar_dataframe(df_seitan_all_vars)
-seitan_clean <- escalar_dataframe(df_seitan)
-
-df_tofu <- limpiar_dataframe(df_tofu_all_vars)
-tofu_clean <- escalar_dataframe(df_tofu)
-
-df_soja <- limpiar_dataframe(df_soja_all_vars)
-soja_clean <- escalar_dataframe(df_soja)
-
 
 # Crear un vector con las palabras a buscar
 
 palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI")
 
-df_seitan <- filtro_negativo(df_seitan, palabras_a_eliminar)
-df_tofu <- filtro_negativo(df_tofu, palabras_a_eliminar)
-df_soja <- filtro_negativo(df_soja, palabras_a_eliminar)
-
-df_seitan <- na.omit(df_seitan)
-df_tofu <- na.omit(df_tofu)
-df_soja <- na.omit(df_soja)
+################################################################################
+# Limpiar Dataframe
+################################################################################
 ```
 
 
@@ -608,9 +81,173 @@ df_soja <- na.omit(df_soja)
 # ###############################################################################
 # ###############################################################################
 
+```{r}
+df_seitan <- limpiar_dataframe(df_seitan_all_vars)
+df_seitan <- filtro_negativo(df_seitan_base, palabras_a_eliminar)
+df_seitan <- na.omit(df_seitan_base)
+df_seitan <- df_seitan[,-7:-8]
+seitan_clean <- escalar_dataframe(df_seitan)
+```
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL SEITAN
+# ###############################################################################
+
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_seitan[,4:6],col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+boxplot(seitan_clean,col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_seitan[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple - Histogramas en la diagonal",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_seitan[,4:6],col = colores, main = "Macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+dispersion_3d(seitan_clean$PROTEINS_100G, seitan_clean$FAT_100G, seitan_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple - Curva de densidad en la diagonal",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(
+  df<-df_seitan[,3:6],
+  title = "Gráfico Múltiple - Dispersión y densidad",
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
+
+```
+
+```{r}
+# Aplica la función para eliminar valores atípicos por columna aplicando el rango intercuartílico
+nuevo_dataframe <- eliminar_atipicos_por_columna(df_seitan[,-1:-2])
+nuevo_dataframe1 <- eliminar_atipicos_por_columna(seitan_clean)
+
+df_seitan <- df_seitan[complete.cases(nuevo_dataframe), ]
+seitan_clean <- seitan_clean[complete.cases(nuevo_dataframe1), ]
+```
+
+
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_seitan[,4:6],col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+boxplot(seitan_clean,col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_seitan[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_seitan[,4:6],col = colores, main = "Macronutrientes para el seitan", ylab = "Valores",las = 3)
+
+dispersion_3d(seitan_clean$PROTEINS_100G, seitan_clean$FAT_100G, seitan_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(df,
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
+```
+
 ```{r, echo = FALSE, warning = FALSE}
 # LOF
-seitan_lof <- LOF_dataframe(seitan_clean)
+puntos<-40
+seitan_lof <- LOF_dataframe(seitan_clean,puntos)
 
 # PCA
 seitan_pca <- PCA_dataframe(seitan_clean)
@@ -650,32 +287,209 @@ df_seitan <- na.omit(df_seitan)
 # ANÁLISIS DATOS
 # ###############################################################################
 
+```{r, echo = FALSE, warning = FALSE}
+
+graf_var_explicada_pca(seitan_pca, "seitan")
+
+```
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+summary(seitan_lof_score)
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_densidad_LOF(seitan_lof_score, "seitan")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_distribucion_OUTLIERS_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_seitan[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
+
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
+
+```{r, echo = FALSE, warning = FALSE}
+graf_histogramas(df_seitan, "- seitan")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+#Datos normalizados para el seitan
+df_seitan_normalizado <- escalar_dataframe(df_seitan)
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_histogramas(df_seitan_normalizado, "- seitan [NORMALIZADO]")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+
+# Crear el gráfico de dispersión en 3D
+
+dispersion_3d(df_seitan_normalizado$PROTEINS_100G, df_seitan_normalizado$FAT_100G, df_seitan_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+
+#dispersion_3d(df_seitan_normalizado$SALT_100G, df_seitan_normalizado$ENERGY_KCAL_100G, df_seitan_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "seitan")
+```
+
+# ###############################################################################
+# CLUSTERS
+# ###############################################################################
+
+```{r, echo = FALSE, warning = FALSE}
+# total de cluster óptimos
+graf_cluster_optimos(df_seitan_normalizado)
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+# Número de clusters
+n_clusters_seitan <- 3
+# Definir una paleta de colores personalizada
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
+
+seitan_kms_clusters <- clustering_kmeans(df_seitan_normalizado, n_clusters_seitan)
+graf_clustering_kmeans(df_seitan_normalizado, seitan_kms_clusters, "seitan")
+```
+```{r, echo = FALSE, warning = FALSE}
+seitan_euclidean_clusters <- clustering_euclidean(df_seitan_normalizado, n_clusters_seitan)
+graf_clustering_euclidean(df_seitan_normalizado, n_clusters_seitan, "seitan", seitan_euclidean_clusters)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
+clustering_kmeans_SUPERPUESTO(df_seitan_normalizado, n_clusters_seitan, "seitan")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
+
+# Biplot PCA y K-Means para medir representatividad
+PCA_CLUSTER_KMEANS(df_seitan_normalizado, n_clusters_seitan)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+df_seitan_min_max <- centroides_clustering(seitan_kms_clusters)
+df_seitan_min_max
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("#66BD63", "orange","red")
+graf_radarchart(df_seitan_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+colores <- c("red","orange", "#66BD63")
+graf_radarchart_clusters(df_seitan_min_max, c("1", "2", "3"), n_clusters_seitan)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+top10_clusters(df_seitan, n_clusters_seitan)
+```
+```{r}
+#calculo de la densidad calorica
+df_seitan$densidad_calorica <- df_seitan$ENERGY_KCAL_100 / 100
+df_seitan$scoring_densidad_calorica <- df_seitan$densidad_calorica/max(df_seitan$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_seitan$densidad_nutricional <-  (df_seitan$FAT_100G+df_seitan$CARBOHYDRATES_100G+df_seitan$PROTEINS_100G)/df_seitan$ENERGY_KCAL_100G*100
+df_seitan$scoring_densidad_nutricional <- df_seitan$densidad_nutricional/max(df_seitan$densidad_nutricional)*100
+
+#calculo de la relacion entre densidades
+df_seitan$relacion <- df_seitan$scoring_densidad_nutricional/df_seitan$scoring_densidad_calorica
+```
+
+
+```{r}
+cluster <- seitan_kms_clusters$cluster
+df_seitan <- cbind(df_seitan,cluster)
+tabla_frecuencia <- table(df_seitan$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_s <- subset(df_seitan, df_seitan$cluster == 1)
+summary(cluster1_s)
+```
+```{r}
+cluster2_s <- subset(df_seitan, df_seitan$cluster == 2)
+summary(cluster2_s)
+```
+```{r}
+cluster3_s <- subset(df_seitan, df_seitan$cluster == 3)
+summary(cluster3_s)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")
+
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_seitan, aes(df_seitan$scoring_densidad_nutricional, df_seitan$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```
+
+# ###############################################################################
+# ###############################################################################
+# tofu
+# ###############################################################################
+# ###############################################################################
+```{r}
+df_tofu <- limpiar_dataframe(df_tofu_all_vars)
+df_tofu <- filtro_negativo(df_tofu, palabras_a_eliminar)
+df_tofu <- na.omit(df_tofu)
+tofu_clean <- escalar_dataframe(df_tofu)
+df_tofu <- df_tofu[,-7:-8]
+```
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL tofu
+# ###############################################################################
+
 ```{r}
 
 # Crear un boxplot combinado para cada columna
 colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
 
-boxplot(df_seitan[,4:6],col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
-boxplot(seitan_clean,col = colores, main = "Distribución de los macronutrientes para el seitan", ylab = "Valores",las = 3)
+boxplot(df_tofu[,4:6],col = colores, main = "Distribución de los macronutrientes para el tofu", ylab = "Valores",las = 3)
+boxplot(tofu_clean,col = colores, main = "Distribución de los macronutrientes para el tofu", ylab = "Valores",las = 3)
 
-# Puedes personalizar el gráfico según tus preferencias
-
-```
-```{r}
 # Instala y carga la librería GGally si no está instalada
 # install.packages("GGally")
 library(GGally)
-df<-df_seitan[,3:6]
+df<-df_tofu[,3:6]
 # Crear el gráfico múltiple con GGally
 ggpairs(df, 
-        title = "Gráfico Múltiple",
+        title = "Gráfico Múltiple - Histogramas en la diagonal",
         upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
         diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
         lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
 )
-```
-
-```{r}
+#Gráfico de 
 par(mfrow = c(1, 2))
 
 # Cambiar la fuente y el tamaño de las etiquetas
@@ -686,13 +500,92 @@ par(cex.sub = 1)           # Cambia el tamaño del subtítulo
 par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
 par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
 
-boxplot(df_seitan[,4:6],col = colores, main = "Macronutrientes para el seitan", ylab = "Valores",las = 3)
+boxplot(df_tofu[,4:6],col = colores, main = "Macronutrientes para el tofu", ylab = "Valores",las = 3)
 
-dispersion_3d(df_seitan_normalizado$PROTEINS_100G, df_seitan_normalizado$FAT_100G, df_seitan_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
+dispersion_3d(tofu_clean$PROTEINS_100G, tofu_clean$FAT_100G, tofu_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "tofu")
 
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple - Curva de densidad en la diagonal",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(
+  df<-df_tofu[,3:6],
+  title = "Gráfico Múltiple - Dispersión y densidad",
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
 
 ```
+
 ```{r}
+# Aplica la función para eliminar valores atípicos por columna aplicando el rango intercuartílico
+nuevo_dataframe <- eliminar_atipicos_por_columna(df_tofu[,-1:-2])
+nuevo_dataframe1 <- eliminar_atipicos_por_columna(tofu_clean)
+
+df_tofu <- df_tofu[complete.cases(nuevo_dataframe), ]
+tofu_clean <- tofu_clean[complete.cases(nuevo_dataframe1), ]
+```
+
+
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_tofu[,4:6],col = colores, main = "Distribución de los macronutrientes para el tofu", ylab = "Valores",las = 3)
+boxplot(tofu_clean,col = colores, main = "Distribución de los macronutrientes para el tofu", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_tofu[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_tofu[,4:6],col = colores, main = "Macronutrientes para el tofu", ylab = "Valores",las = 3)
+
+dispersion_3d(tofu_clean$PROTEINS_100G, tofu_clean$FAT_100G, tofu_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "tofu")
+
+
 library(GGally)
 # Define los colores que deseas utilizar
 
@@ -717,142 +610,22 @@ ggpairs(df,
           }
         }
 )
-```
-```{r}
+
 # Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
 library(GGally)
  
 # From the help page:
 data(df, package = "reshape")
-ggpairs(
-  df<-df_seitan[,3:6],
+ggpairs(df,
   upper = list(continuous = "density", combo = "box_no_facet"),
   lower = list(continuous = "points", combo = "dot_no_facet")
 )
-
-```
-   
-
-```{r, echo = FALSE, warning = FALSE}
-
-graf_var_explicada_pca(seitan_pca, "seitan")
-
-```
-```{r}
-par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(df_seitan[,3:6]) # notice I am scaling the vectors)
-clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
-
-```
-El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
-Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
-¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
-
-```{r, echo = FALSE, warning = FALSE}
-
-graf_distribucion_LOF(seitan_lof_score, "seitan")
-```
-```{r}
-summary(seitan_lof_score)
-
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-
-graf_distribucion_densidad_LOF(seitan_lof_score, "seitan")
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-
-graf_distribucion_OUTLIERS_LOF(seitan_lof_score, "seitan")
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
-graf_histogramas(df_seitan, "- seitan")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-#Datos normalizados para el seitan
-df_seitan_normalizado <- escalar_dataframe(df_seitan)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-graf_histogramas(df_seitan_normalizado, "- seitan [NORMALIZADO]")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Crear el gráfico de dispersión en 3D
-
-dispersion_3d(df_seitan_normalizado$PROTEINS_100G, df_seitan_normalizado$FAT_100G, df_seitan_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "seitan")
-
-dispersion_3d(df_seitan_normalizado$SALT_100G, df_seitan_normalizado$ENERGY_KCAL_100G, df_seitan_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "seitan")
-```
-
-# ###############################################################################
-# CLUSTERS
-# ###############################################################################
-
-```{r, echo = FALSE, warning = FALSE}
-# total de cluster óptimos
-graf_cluster_optimos(df_seitan_normalizado)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-# Número de clusters
-n_clusters_seitan <- 2
-
-seitan_kms_clusters <- clustering_kmeans(df_seitan_normalizado, n_clusters_seitan)
-graf_clustering_kmeans(df_seitan_normalizado, seitan_kms_clusters, "seitan")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-seitan_euclidean_clusters <- clustering_euclidean(df_seitan_normalizado, n_clusters_seitan)
-graf_clustering_euclidean(df_seitan_normalizado, n_clusters_seitan, "seitan", seitan_euclidean_clusters)
-```
-
-```{r, echo = FALSE, warning = FALSE}
-clustering_kmeans_SUPERPUESTO(df_seitan_normalizado, n_clusters_seitan, "seitan")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-# Biplot PCA y K-Means para medir representatividad
-PCA_CLUSTER_KMEANS(df_seitan_normalizado, n_clusters_seitan)
-```
-
-```{r, echo = FALSE, warning = FALSE}
-df_seitan_min_max <- centroides_clustering(seitan_kms_clusters)
-df_seitan_min_max
-```
-
-```{r, echo = FALSE, warning = FALSE}
-graf_radarchart(df_seitan_min_max)
-```
-
-```{r, echo = FALSE, warning = FALSE}
-graf_radarchart_clusters(df_seitan_min_max, c("1", "2", "3"), n_clusters_seitan)
-```
-
-```{r, echo = FALSE, warning = FALSE}
-# Visualizar los productos más cercanos al centroide que representan cada cluster top10
-top10_clusters(df_seitan, n_clusters_seitan)
-```
-
-# ###############################################################################
-# ###############################################################################
-# TOFU
-# ###############################################################################
-# ###############################################################################
-
-
-```{r, echo = FALSE, warning = FALSE}
-
 # LOF
-tofu_lof <- LOF_dataframe(tofu_clean)
+puntos<-13
+tofu_lof <- LOF_dataframe(tofu_clean,puntos)
 
 # PCA
 tofu_pca <- PCA_dataframe(tofu_clean)
@@ -879,12 +652,10 @@ df_tofu_outliers <- df_tofu[tofu_lof >= tofu_cuantil_2,]
 tofu_lof_score <- escalar_dataframe_CUANTIL(tofu_lof_score, tofu_cuantil_2)
 
 # Eliminar valores atipicos univariantes
-
-columns_to_check_tofu <- 3:ncol(df_tofu)
-
-for (column_tofu in columns_to_check_tofu) {
-  df_tofu <- remove_outliers(df_tofu, column_tofu)
-}
+#columns_to_check_tofu <- 3:ncol(df_tofu)
+#for (column_tofu in columns_to_check_tofu) {
+#  df_tofu <- remove_outliers(df_tofu, column_tofu)
+#}
 
 # Omitir NA
 df_tofu <- na.omit(df_tofu)
@@ -899,15 +670,13 @@ df_tofu <- na.omit(df_tofu)
 graf_var_explicada_pca(tofu_pca, "tofu")
 
 ```
-```{r}
-par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(df_tofu[,3:6]) # notice I am scaling the vectors)
-clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
-```
-
 ```{r, echo = FALSE, warning = FALSE}
 
 graf_distribucion_LOF(tofu_lof_score, "tofu")
+```
+```{r}
+summary(tofu_lof_score)
+
 ```
 
 
@@ -918,10 +687,17 @@ graf_distribucion_densidad_LOF(tofu_lof_score, "tofu")
 
 
 ```{r, echo = FALSE, warning = FALSE}
-
 graf_distribucion_OUTLIERS_LOF(tofu_lof_score, "tofu")
 ```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_tofu[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
 
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
 
 ```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_tofu, "- tofu")
@@ -930,7 +706,10 @@ graf_histogramas(df_tofu, "- tofu")
 ```{r, echo = FALSE, warning = FALSE}
 #Datos normalizados para el tofu
 df_tofu_normalizado <- escalar_dataframe(df_tofu)
+```
 
+
+```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_tofu_normalizado, "- tofu [NORMALIZADO]")
 ```
 
@@ -940,7 +719,7 @@ graf_histogramas(df_tofu_normalizado, "- tofu [NORMALIZADO]")
 
 dispersion_3d(df_tofu_normalizado$PROTEINS_100G, df_tofu_normalizado$FAT_100G, df_tofu_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "tofu")
 
-dispersion_3d(df_tofu_normalizado$SALT_100G, df_tofu_normalizado$ENERGY_KCAL_100G, df_tofu_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "tofu")
+#dispersion_3d(df_tofu_normalizado$SALT_100G, df_tofu_normalizado$ENERGY_KCAL_100G, df_tofu_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "tofu")
 ```
 
 # ###############################################################################
@@ -954,23 +733,29 @@ graf_cluster_optimos(df_tofu_normalizado)
 
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
 # Número de clusters
 n_clusters_tofu <- 3
+# Definir una paleta de colores personalizada
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
 
 tofu_kms_clusters <- clustering_kmeans(df_tofu_normalizado, n_clusters_tofu)
 graf_clustering_kmeans(df_tofu_normalizado, tofu_kms_clusters, "tofu")
 ```
-
 ```{r, echo = FALSE, warning = FALSE}
 tofu_euclidean_clusters <- clustering_euclidean(df_tofu_normalizado, n_clusters_tofu)
 graf_clustering_euclidean(df_tofu_normalizado, n_clusters_tofu, "tofu", tofu_euclidean_clusters)
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
 clustering_kmeans_SUPERPUESTO(df_tofu_normalizado, n_clusters_tofu, "tofu")
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
+
 # Biplot PCA y K-Means para medir representatividad
 PCA_CLUSTER_KMEANS(df_tofu_normalizado, n_clusters_tofu)
 ```
@@ -981,10 +766,13 @@ df_tofu_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("#66BD63", "orange","red")
 graf_radarchart(df_tofu_min_max)
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+colores <- c("red","orange", "#66BD63")
 graf_radarchart_clusters(df_tofu_min_max, c("1", "2", "3"), n_clusters_tofu)
 ```
 
@@ -992,18 +780,228 @@ graf_radarchart_clusters(df_tofu_min_max, c("1", "2", "3"), n_clusters_tofu)
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
 top10_clusters(df_tofu, n_clusters_tofu)
 ```
+```{r}
+#calculo de la densidad calorica
+df_tofu$densidad_calorica <- df_tofu$ENERGY_KCAL_100 / 100
+df_tofu$scoring_densidad_calorica <- df_tofu$densidad_calorica/max(df_tofu$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_tofu$scoring_densidad_nutricional <-  (df_tofu$FAT_100G+df_tofu$CARBOHYDRATES_100G+df_tofu$PROTEINS_100G)/df_tofu$ENERGY_KCAL_100G*100
+df_tofu$scoring_densidad_nutricional <- df_tofu$scoring_densidad_nutricional/max(df_tofu$scoring_densidad_nutricional)*100
+
+cluster <- tofu_kms_clusters$cluster
+df_tofu <- cbind(df_tofu,cluster)
+df_tofu$relacion <- df_tofu$scoring_densidad_nutricional/df_tofu$scoring_densidad_calorica
+tabla_frecuencia <- table(df_tofu$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_s <- subset(df_tofu, df_tofu$cluster == 1)
+summary(cluster1_s)
+```
+```{r}
+cluster2_s <- subset(df_tofu, df_tofu$cluster == 2)
+summary(cluster2_s)
+```
+```{r}
+cluster3_s <- subset(df_tofu, df_tofu$cluster == 3)
+summary(cluster3_s)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")
+
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_tofu, aes(df_tofu$scoring_densidad_nutricional, df_tofu$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```
+# ###############################################################################
+# ###############################################################################
+# soja
+# ###############################################################################
+# ###############################################################################
+
+```{r}
+df_soja <- limpiar_dataframe(df_soja_all_vars)
+df_soja <- filtro_negativo(df_soja, palabras_a_eliminar)
+df_soja <- na.omit(df_soja)
+soja_clean <- escalar_dataframe(df_soja)
+df_soja <- df_soja[,-7:-8]
+```
+
+
 
 # ###############################################################################
-# ###############################################################################
-# SOJA
-# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL soja
 # ###############################################################################
 
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_soja[,4:6],col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
+boxplot(soja_clean,col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_soja[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple - Histogramas en la diagonal",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_soja[,4:6],col = colores, main = "Macronutrientes para el soja", ylab = "Valores",las = 3)
+
+dispersion_3d(soja_clean$PROTEINS_100G, soja_clean$FAT_100G, soja_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
+
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple - Curva de densidad en la diagonal",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(
+  df<-df_soja[,3:6],
+  title = "Gráfico Múltiple - Dispersión y densidad",
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
+
+```
+
+```{r}
+# Aplica la función para eliminar valores atípicos por columna aplicando el rango intercuartílico
+nuevo_dataframe <- eliminar_atipicos_por_columna(df_soja[,-1:-2])
+nuevo_dataframe1 <- eliminar_atipicos_por_columna(soja_clean)
+
+df_soja <- df_soja[complete.cases(nuevo_dataframe), ]
+soja_clean <- soja_clean[complete.cases(nuevo_dataframe1), ]
+```
+
+
+```{r}
+
+# Crear un boxplot combinado para cada columna
+colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
+
+boxplot(df_soja[,4:6],col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
+boxplot(soja_clean,col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
+
+# Instala y carga la librería GGally si no está instalada
+# install.packages("GGally")
+library(GGally)
+df<-df_soja[,3:6]
+# Crear el gráfico múltiple con GGally
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
+        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
+        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
+)
+#Gráfico de 
+par(mfrow = c(1, 2))
+
+# Cambiar la fuente y el tamaño de las etiquetas
+par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
+par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
+par(cex.main = 1)           # Cambia el tamaño del título principal
+par(cex.sub = 1)           # Cambia el tamaño del subtítulo
+par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
+par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
+
+boxplot(df_soja[,4:6],col = colores, main = "Macronutrientes para el soja", ylab = "Valores",las = 3)
+
+dispersion_3d(soja_clean$PROTEINS_100G, soja_clean$FAT_100G, soja_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
+
+
+library(GGally)
+# Define los colores que deseas utilizar
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Definir los colores para las columnas de interés
+colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
+
+# Crear el gráfico múltiple con histogramas personalizados
+ggpairs(df, 
+        title = "Gráfico Múltiple",
+        diag.panel = function(data, mapping, ...) {
+          col_name <- as.character(mapping$y.name)
+          if (col_name %in% names(colores_histogramas)) {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black") +
+              scale_fill_manual(values = colores_histogramas)
+          } else {
+            ggplot(data = data, mapping = mapping) +
+              geom_histogram(aes(fill = col_name), color = "black")
+          }
+        }
+)
+
+# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
+library(GGally)
+ 
+# From the help page:
+data(df, package = "reshape")
+ggpairs(df,
+  upper = list(continuous = "density", combo = "box_no_facet"),
+  lower = list(continuous = "points", combo = "dot_no_facet")
+)
+```
 
 ```{r, echo = FALSE, warning = FALSE}
-
 # LOF
-soja_lof <- LOF_dataframe(soja_clean)
+puntos<-13
+soja_lof <- LOF_dataframe(soja_clean,puntos)
 
 # PCA
 soja_pca <- PCA_dataframe(soja_clean)
@@ -1030,12 +1028,10 @@ df_soja_outliers <- df_soja[soja_lof >= soja_cuantil_2,]
 soja_lof_score <- escalar_dataframe_CUANTIL(soja_lof_score, soja_cuantil_2)
 
 # Eliminar valores atipicos univariantes
-
-columns_to_check_soja <- 3:ncol(df_soja)
-
-for (column_soja in columns_to_check_soja) {
-  df_soja <- remove_outliers(df_soja, column_soja)
-}
+#columns_to_check_soja <- 3:ncol(df_soja)
+#for (column_soja in columns_to_check_soja) {
+#  df_soja <- remove_outliers(df_soja, column_soja)
+#}
 
 # Omitir NA
 df_soja <- na.omit(df_soja)
@@ -1050,16 +1046,13 @@ df_soja <- na.omit(df_soja)
 graf_var_explicada_pca(soja_pca, "soja")
 
 ```
-
-```{r}
-par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(df_soja[,3:6]) # notice I am scaling the vectors)
-clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
-```
-
 ```{r, echo = FALSE, warning = FALSE}
 
 graf_distribucion_LOF(soja_lof_score, "soja")
+```
+```{r}
+summary(soja_lof_score)
+
 ```
 
 
@@ -1070,10 +1063,17 @@ graf_distribucion_densidad_LOF(soja_lof_score, "soja")
 
 
 ```{r, echo = FALSE, warning = FALSE}
-
 graf_distribucion_OUTLIERS_LOF(soja_lof_score, "soja")
 ```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_soja[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
 
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
 
 ```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_soja, "- soja")
@@ -1082,7 +1082,10 @@ graf_histogramas(df_soja, "- soja")
 ```{r, echo = FALSE, warning = FALSE}
 #Datos normalizados para el soja
 df_soja_normalizado <- escalar_dataframe(df_soja)
+```
 
+
+```{r, echo = FALSE, warning = FALSE}
 graf_histogramas(df_soja_normalizado, "- soja [NORMALIZADO]")
 ```
 
@@ -1092,7 +1095,7 @@ graf_histogramas(df_soja_normalizado, "- soja [NORMALIZADO]")
 
 dispersion_3d(df_soja_normalizado$PROTEINS_100G, df_soja_normalizado$FAT_100G, df_soja_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
 
-dispersion_3d(df_soja_normalizado$SALT_100G, df_soja_normalizado$ENERGY_KCAL_100G, df_soja_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "soja")
+#dispersion_3d(df_soja_normalizado$SALT_100G, df_soja_normalizado$ENERGY_KCAL_100G, df_soja_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "soja")
 ```
 
 # ###############################################################################
@@ -1106,23 +1109,29 @@ graf_cluster_optimos(df_soja_normalizado)
 
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
 # Número de clusters
 n_clusters_soja <- 3
+# Definir una paleta de colores personalizada
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
 
 soja_kms_clusters <- clustering_kmeans(df_soja_normalizado, n_clusters_soja)
 graf_clustering_kmeans(df_soja_normalizado, soja_kms_clusters, "soja")
 ```
-
 ```{r, echo = FALSE, warning = FALSE}
 soja_euclidean_clusters <- clustering_euclidean(df_soja_normalizado, n_clusters_soja)
 graf_clustering_euclidean(df_soja_normalizado, n_clusters_soja, "soja", soja_euclidean_clusters)
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
 clustering_kmeans_SUPERPUESTO(df_soja_normalizado, n_clusters_soja, "soja")
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")  # Puedes ajustar los colores según tus preferencias
+
 # Biplot PCA y K-Means para medir representatividad
 PCA_CLUSTER_KMEANS(df_soja_normalizado, n_clusters_soja)
 ```
@@ -1133,10 +1142,13 @@ df_soja_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("#66BD63", "orange","red")
 graf_radarchart(df_soja_min_max)
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
+colores <- c("red","orange", "#66BD63")
 graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), n_clusters_soja)
 ```
 
@@ -1144,4 +1156,49 @@ graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), n_clusters_soja)
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
 top10_clusters(df_soja, n_clusters_soja)
 ```
+```{r}
+#calculo de la densidad calorica
+df_soja$densidad_calorica <- df_soja$ENERGY_KCAL_100 / 100
+df_soja$scoring_densidad_calorica <- df_soja$densidad_calorica/max(df_soja$densidad_calorica)*100
 
+#calculo de la densidad nutricional
+df_soja$scoring_densidad_nutricional <-  (df_soja$FAT_100G+df_soja$CARBOHYDRATES_100G+df_soja$PROTEINS_100G)/df_soja$ENERGY_KCAL_100G*100
+df_soja$scoring_densidad_nutricional <- df_soja$scoring_densidad_nutricional/max(df_soja$scoring_densidad_nutricional)*100
+
+cluster <- soja_kms_clusters$cluster
+df_soja <- cbind(df_soja,cluster)
+df_soja$relacion <- df_soja$scoring_densidad_nutricional/df_soja$scoring_densidad_calorica
+tabla_frecuencia <- table(df_soja$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_s <- subset(df_soja, df_soja$cluster == 1)
+summary(cluster1_s)
+```
+```{r}
+cluster2_s <- subset(df_soja, df_soja$cluster == 2)
+summary(cluster2_s)
+```
+```{r}
+cluster3_s <- subset(df_soja, df_soja$cluster == 3)
+summary(cluster3_s)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+cluster_colors <- c("#66BD63", "orange","red")
+
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_soja, aes(df_soja$scoring_densidad_nutricional, df_soja$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```
