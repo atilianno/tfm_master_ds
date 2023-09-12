@@ -1,0 +1,17 @@
+{
+  "seitan": {
+    "green" : "Este tipo de alimento tiene la energía y las proteínas más altas, con un contenido moderado de grasas y carbohidratos. Parece ser el más nutritivo para alguien que busca proteínas y energía.",
+	"red" : "Este tipo de alimento tiene un nivel medio de energía, bajo en grasa y moderado en carbohidratos y proteínas. Es una opción equilibrada pero menos rica en nutrientes.",
+	"red" : "Este tipo de alimento tiene niveles moderados de energía y grasas, pero es bajo en proteínas y alto en carbohidratos. No es ideal para una dieta alta en proteínas."
+  },
+  "tofu": {
+    "red" : "Este tipo de alimento es alto en energía y carbohidratos, moderado en grasas y bajo en proteínas. Es bueno para energía, pero no ideal para una dieta alta en proteínas.",
+	"green" : "Este tipo de alimento es el más equilibrado en términos de todos los nutrientes y es especialmente alto en proteínas y grasas. Es probablemente el mejor para alguien que busca una fuente de proteínas y energía.",
+	"red" : "Este tipo de alimento es moderado en energía y proteínas pero bajo en carbohidratos y grasas. Podría considerarse menos ideal debido a su menor contenido en energía y macronutrientes."
+  },
+  "soja": {
+    "green" : "Este tipo de alimento es muy alto en proteínas y energía y moderado en grasas y carbohidratos. Parece ser la mejor opción para una dieta alta en proteínas y energía.",
+	"red" : "Este tipo de alimento es bajo en todas las categorías. No sería ideal para alguien que busca una fuente rica en nutrientes.",
+	"red" : "Este tipo de alimento es alto en carbohidratos y moderado en energía y grasas, pero bajo en proteínas. Sería bueno para energía rápida pero no para una dieta alta en proteínas."
+  }
+}
