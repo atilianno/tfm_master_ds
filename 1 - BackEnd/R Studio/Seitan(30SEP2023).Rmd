@@ -287,7 +287,7 @@ fviz_cluster(object = km_clusters, data = d2f,
              geom = "point", ellipse.type = "euclid",
              show.clust.cent = TRUE, star.plot = TRUE,
              palette = cluster_colors) +
-  labs(title = "Resultados clustering K-means - soja") +
+  labs(title = "Resultados clustering K-means - seitan") +
   theme_bw() +  
   theme(legend.position = "right")
 
