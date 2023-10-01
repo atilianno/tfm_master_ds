@@ -3,28 +3,28 @@
     {
       "nombre": "soja",
       "nutrientes": {
-        "Carbohidratos": {"min": 0, "max": 65.8},
-        "Proteínas": {"min": 0, "max": 55.2},
-        "Grasas": {"min": 0, "max": 30},
-        "Calorías": {"min": 0, "max": 2460}
+        "Carbohidratos": {"min": 0.4, "max": 87.1},
+        "Proteínas": {"min": 0.1, "max": 76},
+        "Grasas": {"min": 0.1, "max": 68},
+        "Calorías": {"min": 14, "max": 638.8}
       }
     },
     {
       "nombre": "tofu",
       "nutrientes": {
-        "Carbohidratos": {"min": 0, "max": 22.4},
-        "Proteínas": {"min": 2, "max": 23},
-        "Grasas": {"min": 0, "max": 19.2},
-        "Calorías": {"min": 0, "max": 1268}
+        "Carbohidratos": {"min": 0.1, "max": 35.5},
+        "Proteínas": {"min": 0.1, "max": 28.2},
+        "Grasas": {"min": 0.6, "max": 29.4},
+        "Calorías": {"min": 18, "max": 321}
       }
     },
     {
       "nombre": "seitan",
       "nutrientes": {
-        "Carbohidratos": {"min": 0.4, "max": 25.4},
-        "Proteínas": {"min": 7, "max": 34},
-        "Grasas": {"min": 0, "max": 18.3},
-        "Calorías": {"min": 92, "max": 1264}
+        "Carbohidratos": {"min": 0.5, "max": 33.2},
+        "Proteínas": {"min": 3.6, "max": 36},
+        "Grasas": {"min": 0.1, "max": 21},
+        "Calorías": {"min": 74, "max": 358}
       }
     }
   ]

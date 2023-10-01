@@ -1,17 +1,17 @@
 {
   "seitan": {
-    "green" : "Este tipo de alimento tiene la energía y las proteínas más altas, con un contenido moderado de grasas y carbohidratos. Parece ser el más nutritivo para alguien que busca proteínas y energía.",
-	"red" : "Este tipo de alimento tiene un nivel medio de energía, bajo en grasa y moderado en carbohidratos y proteínas. Es una opción equilibrada pero menos rica en nutrientes.",
-	"red" : "Este tipo de alimento tiene niveles moderados de energía y grasas, pero es bajo en proteínas y alto en carbohidratos. No es ideal para una dieta alta en proteínas."
+    "green" : "Este tipo de alimento representa una forma ideal de incorporar seitán en una dieta vegana. El seitán es conocido por su alto contenido de proteínas, lo que lo convierte en una excelente fuente de nutrientes esenciales para los veganos. Además, tiene una cantidad moderada de energía, lo que lo hace adecuado para mantener niveles de energía óptimos. Su bajo contenido de grasa y carbohidratos lo convierten en una opción nutricionalmente equilibrada",
+	"red" : "Este tipo de alimento representa una versión más ligera del seitán, con un contenido calórico ligeramente menor. Aunque su cantidad de proteínas sigue siendo razonable, es importante tener en cuenta que podría proporcionar menos energía en comparación con otras variedades de seitán. Sin embargo, sigue siendo una opción equilibrada y una buena fuente de proteínas.",
+	"red" : "El seitán en este clúster tiene un contenido moderado de energía y carbohidratos, pero su contenido de grasa es notablemente alto en comparación con otros grupos. Además, su nivel de proteínas es más bajo, lo que podría no ser ideal para aquellos que buscan una fuente principal de proteínas en su dieta vegana. Las personas con restricciones dietéticas de grasa o que buscan una mayor cantidad de proteínas pueden considerar otras opciones."
   },
   "tofu": {
-    "red" : "Este tipo de alimento es alto en energía y carbohidratos, moderado en grasas y bajo en proteínas. Es bueno para energía, pero no ideal para una dieta alta en proteínas.",
-	"green" : "Este tipo de alimento es el más equilibrado en términos de todos los nutrientes y es especialmente alto en proteínas y grasas. Es probablemente el mejor para alguien que busca una fuente de proteínas y energía.",
-	"red" : "Este tipo de alimento es moderado en energía y proteínas pero bajo en carbohidratos y grasas. Podría considerarse menos ideal debido a su menor contenido en energía y macronutrientes."
+    "green" : "Este tipo de alimento muestra una variedad equilibrada de tofu que ofrece una combinación moderada de proteínas, energía, grasas y carbohidratos. El tofu es conocido por ser una excelente fuente de proteínas vegetales y esta variante proporciona una cantidad razonable de proteínas y energía, lo que lo convierte en una buena opción para mantener una dieta vegana bien equilibrada.",
+	"red" : "El tofu en este tipo de alimento, aunque tiene un contenido moderado de proteínas y grasas, es notablemente más bajo en energía. Esto puede ser una elección adecuada si deseas limitar la ingesta calórica, pero es importante asegurarse de obtener suficiente energía de otras fuentes en tu dieta vegana para evitar deficiencias.",
+	"red" : "Este tipo de alimento de tofu tiene un alto contenido de proteínas y energía, pero es bajo en carbohidratos y alto en grasa. Si bien es una excelente fuente de proteínas y energía, su alto contenido en grasa podría no ser adecuado para algunas personas, especialmente si están buscando una dieta vegana baja en grasas. Es importante consumirlo con moderación y equilibrar su consumo con otras opciones más bajas en grasa."
   },
   "soja": {
-    "green" : "Este tipo de alimento es muy alto en proteínas y energía y moderado en grasas y carbohidratos. Parece ser la mejor opción para una dieta alta en proteínas y energía.",
-	"red" : "Este tipo de alimento es bajo en todas las categorías. No sería ideal para alguien que busca una fuente rica en nutrientes.",
-	"red" : "Este tipo de alimento es alto en carbohidratos y moderado en energía y grasas, pero bajo en proteínas. Sería bueno para energía rápida pero no para una dieta alta en proteínas."
+    "green" : "Este tipo de alimento representa una variedad de soja que es una fuente excelente de proteínas y energía para una dieta vegana. La soja es conocida por ser una fuente completa de proteínas vegetales y este clúster ofrece una cantidad significativa de proteínas y energía. Además, contiene moderadas grasas y carbohidratos, lo que la convierte en una opción muy equilibrada y nutritiva.",
+	"red" : "Aunque este tipo de alimento de soja es rico en carbohidratos y proporciona una cantidad moderada de energía, es bajo en proteínas y grasas. Es una buena opción para obtener energía de carbohidratos, pero no es la elección óptima para satisfacer las necesidades de proteínas de una dieta vegana. Puede ser necesario complementarlo con otras fuentes de proteínas.",
+	"red" : " La soja en este tipo de alimento tiene niveles bajos de todos los nutrientes, incluyendo energía, carbohidratos, proteínas y grasas. No se recomienda como una fuente principal de nutrientes en una dieta vegana y no proporcionaría una cantidad adecuada de energía o proteínas."
   }
 }
