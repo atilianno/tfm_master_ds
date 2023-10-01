@@ -1,0 +1,107 @@
+
+```{r}
+library(ggplot2)
+library(car)
+library(dplyr)
+library(factoextra)
+library(cluster)
+library(simstudy)
+library(data.table)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(corrr)
+```
+
+
+```{r}
+df <- data.frame(iris)
+iris.2 <- iris[,-5]
+species <- iris[,5]
+
+di=data.frame(df) %>% 
+  mutate(Species=dplyr::recode(Species,
+                               setosa="st",
+                               versicolor="vs",
+                               virginica="vg"))  
+pairs(di[,1:4], col = species,lower.panel = NULL)
+par(xpd = TRUE)
+legend(x = 0.05, y = 0.4, cex = 2,
+       legend=as.character(levels(species)),
+       fill = unique(species))
+```
+
+```{r}
+set.seed(20)
+k.means.fit <-kmeans(di[,1:4], 3, nstart = 10)
+k.means.fit 
+```
+
+```{r}
+k.means.fit$centers
+```
+
+```{r}
+k.means.fit$ifault
+```
+```{r}
+grupos=k.means.fit$cluster
+table(di$Species,grupos) #Matriz de confusión
+```
+
+```{r}
+dif=data.frame(di,grupos)
+dif=data.frame(dif) %>% 
+  mutate(grupos=dplyr::recode(grupos,
+                              "3"="st",
+                              "2"="vs",
+                              "1"="vg")) 
+table(dif$grupos,dif$Species)
+```
+# Combinación K-means y PCA
+
+```{r}
+d2 <- scale(di[,1:4])
+rownames(d2) <- di$Species
+fviz_nbclust(x = d2, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(d2, method = "euclidean"), nstart = 50)
+```
+
+```{r}
+set.seed(123)
+d2f=data.frame(d2)
+km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
+
+# Las funciones del paquete factoextra emplean el nombre de las filas del
+# dataframe que contiene los datos como identificador de las observaciones.
+# Esto permite añadir labels a los gráficos.
+fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize=0.5,outlier.color="darkred") +
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +  theme(legend.position = "none")
+```
+```{r}
+require(cluster)
+pam.res <- pam(d2f, 3)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+```
+```{r}
+data(iris)
+# PCA
+pca <- prcomp(iris[,-5], scale=TRUE)
+df.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+```
+

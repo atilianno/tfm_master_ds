@@ -7,38 +7,56 @@
 ################################################################################
 # Función para preparar y limpiar DataFrames
 ################################################################################
+# Función para determinar si una columna tiene elementos no numéricos
 
-limpiar_dataframe <- function(df) {
-  
+
+# # Función para convertir una columna a numérica
+# convert_to_numeric <- function(column) {
+#   avg_value <- mean(as.numeric(column[!is.na(suppressWarnings(as.numeric(column)))]), na.rm = TRUE)
+#   column <- map_dbl(column, ~ ifelse(is.na(suppressWarnings(as.numeric(.x))), avg_value, as.numeric(.x)))
+#   return(column)
+# }
+
+dataframe_objetivo <- function(df, columnas) {
   # Seleccionar columnas de interés
-  df <- df[,c("ISO3","PRODUCT_NAME","ENERGY_KCAL_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G", "SUGARS_100G", "SALT_100G")]
+  df <- df[,columnas]
+
+  return(df)
+}
+
+
+# Función para convertir una columna a numérica
+convert_to_numeric <- function(column) {
+  # Calcula el promedio de los elementos numéricos en la columna
+  avg_value <- mean(as.numeric(column[!is.na(suppressWarnings(as.numeric(column)))]), na.rm = TRUE)
   
+  # Reemplaza los valores no numéricos y NA por el promedio calculado
+  column <- map_dbl(column, ~ ifelse(is.na(suppressWarnings(as.numeric(.x))), avg_value, as.numeric(.x)))
+
+  return(column)
+}
+
+limpiar_dataframe <- function(df, columns_to_convert) {
+
   # Eliminar registros duplicados
   df <- subset(df, !duplicated(df))
   
-  # Convertir a numérico
-  PRODUCT_NAME <- df[,"PRODUCT_NAME"]
-  ISO3 <- df[,"ISO3"]
-  
+  # Convertir solo las columnas identificadas
   df_nuevo <- df %>%
-    mutate(across(where(is.character), type.convert, as.is = TRUE)) %>%
-    select_if(is.numeric)
-  
-  df_nuevo <- cbind(ISO3, PRODUCT_NAME, df_nuevo)
-  
+    mutate(across(all_of(columns_to_convert), convert_to_numeric))
+
+  df_nuevo <- df %>%
+  mutate(across(all_of(columns_to_convert), convert_to_numeric))
+
   # Eliminar filas con suma de columnas numéricas igual a 0
-  #suma_columnas <- rowSums(df_nuevo[,3:ncol(df_nuevo)])
-  #df_nuevo <- cbind(df_nuevo, suma = suma_columnas)
-  #df_nuevo <- subset(df_nuevo, suma != 0)
-  #df_nuevo <- df_nuevo[, -which(names(df_nuevo) == "suma")]
-  df_nuevo <- df_nuevo[apply(df_nuevo != 0, 1, all), ]
+  df_nuevo <- df_nuevo[apply(df_nuevo[, columns_to_convert], 1, sum) != 0, ]
   
   # Omitir NA
   df_nuevo <- na.omit(df_nuevo)
   
   # Elimina registros duplicados
   df_nuevo <- subset(df_nuevo, !duplicated(df_nuevo))
-  
+
   return(df_nuevo)
 }
 ################################################################################
@@ -57,14 +75,16 @@ eliminar_outliers_lof <- function(df, k, threshold) {
 # Función para normalizar DataFrames
 ################################################################################
 
-escalar_dataframe <- function(df) {
+# Función para escalar los datos
+escalar_dataframe <- function(df, columnas_numericas) {
   
-  df_nuevo <- df %>%
+  # Convertir PRODUCT_NAME a factor
+  df <- df %>%
     mutate(PRODUCT_NAME = as.factor(PRODUCT_NAME))
   
-  #df_nuevo <- as.data.frame(scale(df[,-1:-2]))
-  df_nuevo <- df_nuevo[,-1:-2] %>%
-    mutate_all(~ (.-min(.)) / (max(.) - min(.)))
+  # Escalar solamente las columnas numéricas
+  df_nuevo <- df %>%
+    mutate(across(all_of(columnas_numericas), ~ (. - min(.)) / (max(.) - min(.))))
   
   return(df_nuevo)
 }
@@ -94,6 +114,10 @@ PCA_dataframe <- function(df) {
 
 LOF_dataframe <- function(df,puntos) {
   
+  # Eliminar columnas no numéricas
+  #df_nuevo <- df %>% select_if(is.numeric)
+
+  # LOF
   df_nuevo <- lof(df, puntos)
   
   return(df_nuevo)
@@ -164,6 +188,9 @@ verificar_palabras <- function(texto, palabras) {
 
 filtro_negativo <- function(df, palabras_a_eliminar) {
   
+  # ELiminar columnas que ENERGY_KCAL_100G = 0
+  df <- df %>% filter(ENERGY_KCAL_100G > 0)
+
   # Identificar las filas que contienen alguna de las palabras a eliminar
   filas_a_eliminar <- apply(df, 1, function(row) any(verificar_palabras(row["PRODUCT_NAME"], palabras_a_eliminar)))
   
@@ -285,7 +312,7 @@ dispersion_3d <- function(df1, df2, df3, column1, column2, column3, producto){
 
 
 #Clustergrama
-source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/clustergram.r")
+source("clustergram.r")
 
 
 # ###############################################################################

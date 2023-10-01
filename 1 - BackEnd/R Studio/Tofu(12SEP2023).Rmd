@@ -60,10 +60,9 @@ source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 
 ################################################################################
 # Carga de datos
 ################################################################################
+df_seitan_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/seitan.csv', sep=','))
+df_tofu_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/tofu.csv', sep=','))
 df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
-df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
-df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
-
 
 # Crear un vector con las palabras a buscar
 
@@ -77,173 +76,96 @@ palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE S
 
 # ###############################################################################
 # ###############################################################################
-# soja
+# seitan
 # ###############################################################################
 # ###############################################################################
 
 ```{r}
-df_soja <- limpiar_dataframe(df_soja_all_vars)
-df_soja <- filtro_negativo(df_soja, palabras_a_eliminar)
-df_soja <- na.omit(df_soja)
-df_soja <- df_soja[,-7:-8]
-soja_clean <- escalar_dataframe(df_soja)
+df_tofu <- limpiar_dataframe(df_tofu_all_vars)
+df_tofu <- filtro_negativo(df_tofu, palabras_a_eliminar)
+df_tofu <- na.omit(df_tofu)
+df_tofu <- subset(df_tofu, !(ISO3 == "CHE" & PRODUCT_NAME == "TOFU"))
+df_tofu <- df_tofu[,-7:-8]
+tofu_clean <- escalar_dataframe(df_tofu)
 ```
 
 # ###############################################################################
-# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL soja
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL tofu
 # ###############################################################################
-
-```{r}
-# Aplica la función para eliminar valores atípicos por columna aplicando el rango intercuartílico
-#nuevo_dataframe <- eliminar_atipicos_por_columna(df_soja[,-1:-2])
-#nuevo_dataframe1 <- eliminar_atipicos_por_columna(soja_clean)
-
-#df_soja <- df_soja[complete.cases(nuevo_dataframe), ]
-#soja_clean <- soja_clean[complete.cases(nuevo_dataframe1), ]
-```
-
-
-```{r}
-
-# Crear un boxplot combinado para cada columna
-colores <- c("lightblue", "pink", "orange","blue","red", "green", "purple", "brown", "gray")
-
-boxplot(df_soja[,4:6],col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
-boxplot(soja_clean,col = colores, main = "Distribución de los macronutrientes para el soja", ylab = "Valores",las = 3)
-
-# Instala y carga la librería GGally si no está instalada
-# install.packages("GGally")
-library(GGally)
-df<-df_soja[,3:6]
-# Crear el gráfico múltiple con GGally
-ggpairs(df, 
-        title = "Gráfico Múltiple",
-        upper = list(continuous = "points"),  # Gráfico de dispersión en la región superior
-        diag = list(continuous = "barDiag"),  # Histogramas en la diagonal
-        lower = list(continuous = "density")  # Gráfico de densidad en la región inferior
-)
-#Gráfico de 
-par(mfrow = c(1, 2))
-
-# Cambiar la fuente y el tamaño de las etiquetas
-par(font.lab = 1)            # Cambia la fuente de las etiquetas de ejes (2 es negrita)
-par(cex.lab = 1)           # Cambia el tamaño de las etiquetas de ejes
-par(cex.main = 1)           # Cambia el tamaño del título principal
-par(cex.sub = 1)           # Cambia el tamaño del subtítulo
-par(cex.axis = 0.5)          # Cambia el tamaño de las etiquetas de ejes X e Y
-par(font.axis = 3)           # Cambia la fuente de las etiquetas de ejes (3 es itálica)
-
-boxplot(df_soja[,4:6],col = colores, main = "Macronutrientes para el soja", ylab = "Valores",las = 3)
-
-dispersion_3d(soja_clean$PROTEINS_100G, soja_clean$FAT_100G, soja_clean$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
-
-
-library(GGally)
-# Define los colores que deseas utilizar
-
-# Definir los colores para las columnas de interés
-colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
-
-# Definir los colores para las columnas de interés
-colores_histogramas <- c("FAT_100G" = "lightblue", "CARBOHYDRATES_100G" = "pink", "PROTEINS_100G" = "orange")
-
-# Crear el gráfico múltiple con histogramas personalizados
-ggpairs(df, 
-        title = "Gráfico Múltiple",
-        diag.panel = function(data, mapping, ...) {
-          col_name <- as.character(mapping$y.name)
-          if (col_name %in% names(colores_histogramas)) {
-            ggplot(data = data, mapping = mapping) +
-              geom_histogram(aes(fill = col_name), color = "black") +
-              scale_fill_manual(values = colores_histogramas)
-          } else {
-            ggplot(data = data, mapping = mapping) +
-              geom_histogram(aes(fill = col_name), color = "black")
-          }
-        }
-)
-
-# Quick display of two cabapilities of GGally, to assess the distribution and correlation of variables 
-library(GGally)
- 
-# From the help page:
-data(df, package = "reshape")
-ggpairs(df,
-  upper = list(continuous = "density", combo = "box_no_facet"),
-  lower = list(continuous = "points", combo = "dot_no_facet")
-)
-```
 
 ```{r echo=FALSE, warning=FALSE}
 # LOF
 puntos <- 50
-soja_lof <- LOF_dataframe(soja_clean,puntos)
+tofu_lof <- LOF_dataframe(tofu_clean,puntos)
 
 # PCA
-soja_pca <- PCA_dataframe(soja_clean)
+tofu_pca <- PCA_dataframe(tofu_clean)
 
 # LOFT SCORE
-soja_lof_score <- LOF_SCORE_dataframe(soja_pca, soja_lof, soja_clean)
+tofu_lof_score <- LOF_SCORE_dataframe(tofu_pca, tofu_lof, tofu_clean)
 
 # corte quantil
-soja_probabilidad <- 0.9
+tofu_probabilidad <- 0.9
 
 # quantiles
-soja_quantiles_vars <- obtener_cuantiles(soja_lof_score, soja_probabilidad)
+tofu_quantiles_vars <- obtener_cuantiles(tofu_lof_score, tofu_probabilidad)
 
 # Ahora 'quantiles_vars' es una lista con los cuantiles
-soja_cuantil_1 <- soja_quantiles_vars$cuantil_0
-soja_cuantil_2 <- soja_quantiles_vars$cuantil_1
+tofu_cuantil_1 <- tofu_quantiles_vars$cuantil_0
+tofu_cuantil_2 <- tofu_quantiles_vars$cuantil_1
 
 # DATAFRAMES outliers
 
-df_soja <- df_soja[soja_lof < soja_cuantil_2,]
-df_soja_outliers <- df_soja[soja_lof >= soja_cuantil_2,]
+df_tofu <- df_tofu[tofu_lof < tofu_cuantil_2,]
+df_tofu_outliers <- df_tofu[tofu_lof >= tofu_cuantil_2,]
 
 # Escalar DATAFRAME - Cuantil
-soja_lof_score <- escalar_dataframe_CUANTIL(soja_lof_score, soja_cuantil_2)
+tofu_lof_score <- escalar_dataframe_CUANTIL(tofu_lof_score, tofu_cuantil_2)
 
 # Eliminar valores atipicos univariantes
-#columns_to_check_soja <- 3:ncol(df_soja)
-#for (column_soja in columns_to_check_soja) {
-#  df_soja <- remove_outliers(df_soja, column_soja)
+#columns_to_check_tofu <- 3:ncol(df_tofu)
+#for (column_tofu in columns_to_check_tofu) {
+#  df_tofu <- remove_outliers(df_tofu, column_tofu)
 #}
 
 # Omitir NA
-df_soja <- na.omit(df_soja)
+df_tofu <- na.omit(df_tofu)
 ```
 
 # ###############################################################################
 # ANÁLISIS DATOS
 # ###############################################################################
+```{r}
+summary(tofu_pca)
+```
 
 ```{r, echo = FALSE, warning = FALSE}
 
-graf_var_explicada_pca(soja_pca, "soja")
+graf_var_explicada_pca(tofu_pca, "tofu")
 
 ```
 ```{r, echo = FALSE, warning = FALSE}
 
-graf_distribucion_LOF(soja_lof_score, "soja")
+graf_distribucion_LOF(tofu_lof_score, "tofu")
 ```
 ```{r}
-summary(soja_lof_score)
+summary(tofu_lof_score)
 
 ```
 
 
 ```{r, echo = FALSE, warning = FALSE}
 
-graf_distribucion_densidad_LOF(soja_lof_score, "soja")
+graf_distribucion_densidad_LOF(tofu_lof_score, "tofu")
 ```
 
 
 ```{r, echo = FALSE, warning = FALSE}
-graf_distribucion_OUTLIERS_LOF(soja_lof_score, "soja")
+graf_distribucion_OUTLIERS_LOF(tofu_lof_score, "tofu")
 ```
 ```{r}
 par(cex.lab = 1.5, cex.main = 1.2)
-Data <- scale(df_soja[,3:6]) # notice I am scaling the vectors)
+Data <- scale(df_tofu[,3:6]) # notice I am scaling the vectors)
 clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
 
 ```
@@ -251,43 +173,23 @@ El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de 
 Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
 ¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
 
-```{r, echo = FALSE, warning = FALSE}
-graf_histogramas(df_soja, "- soja")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-#Datos normalizados para el soja
-df_soja_normalizado <- escalar_dataframe(df_soja)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-graf_histogramas(df_soja_normalizado, "- soja [NORMALIZADO]")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Crear el gráfico de dispersión en 3D
-
-dispersion_3d(df_soja_normalizado$PROTEINS_100G, df_soja_normalizado$FAT_100G, df_soja_normalizado$CARBOHYDRATES_100G, "PROTEINS_100G", "FAT_100G", "CARBOHYDRATES_100G", "soja")
-
-#dispersion_3d(df_soja_normalizado$SALT_100G, df_soja_normalizado$ENERGY_KCAL_100G, df_soja_normalizado$SUGARS_100G, "SALT_100G", "ENERGY_KCAL_100G", "SUGARS_100G", "soja")
-```
 
 # ###############################################################################
 # CLUSTERS
 # ###############################################################################
 
 ```{r}
+
+
 #Datos
 
-df <- df_soja[, c(3:6, 2)]
-soja <- df_soja[, c(3:6, 2)]
+df <- df_tofu[, c(3:6, 2)]
+tofu <- df_tofu[, c(3:6, 2)]
 di=data.frame(df)
 
-df <- data.frame(soja)
-soja.2 <- soja[,-5]
-product <- soja[,5]
+df <- data.frame(tofu)
+tofu.2 <- tofu[,-5]
+product <- tofu[,5]
 
 # Normalización entre 0 y 1
 normalize <- function(x) {
@@ -295,7 +197,7 @@ normalize <- function(x) {
 }
 
 d2f <- as.data.frame(lapply(di[, 1:4], normalize))
-rownames(d2f) <- di$Species
+#rownames(d2f) <- di$Species
 
 # UNO
 cluster_colors <- c("red","#66BD63","orange")
@@ -305,7 +207,7 @@ fviz_nbclust(x = d2f, FUNcluster = kmeans, method = "wss", k.max = 15,
 
 # DOS
 
-set.seed(123)
+#set.seed(123)
 km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
 fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
              ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
@@ -327,7 +229,7 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
 # CUATRO
 
 # PCA
-pca <- prcomp(soja[,-5], scale=TRUE)
+pca <- prcomp(tofu[,-5], scale=TRUE)
 df.pca <- pca$x
 # Cluster over the three first PCA dimensions
 kc <- kmeans(df.pca[,1:3], 3)
@@ -338,63 +240,64 @@ fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = clus
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.line = element_line(colour = "black"),
-        legend.key = element_rect(fill = "white"))
+        legend.key = element_rect(fill ="white"))
 
 
 ```
 
-```{r, echo = FALSE, warning = FALSE}
-df_soja_min_max <- centroides_clustering(km_clusters)
-df_soja_min_max
-```
 
 ```{r, echo = FALSE, warning = FALSE}
-set.seed(123)
-colores <- c("red","#66BD63","orange")
-graf_radarchart(df_soja_min_max)
+df_tofu_min_max <- centroides_clustering(km_clusters)
+df_tofu_min_max
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
 set.seed(123)
 colores <- c("red","#66BD63","orange")
-graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), n_clusters_soja)
+graf_radarchart(df_tofu_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart_clusters(df_tofu_min_max, c("1", "2", "3"), 3)
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
-top10_clusters(df_soja, 3)
+top10_clusters(df_tofu, 3)
 ```
 ```{r}
 #calculo de la densidad calorica
-df_soja$densidad_calorica <- df_soja$ENERGY_KCAL_100 / 100
-df_soja$scoring_densidad_calorica <- df_soja$densidad_calorica/max(df_soja$densidad_calorica)*100
+df_tofu$densidad_calorica <- df_tofu$ENERGY_KCAL_100 / 100
+df_tofu$scoring_densidad_calorica <- df_tofu$densidad_calorica/max(df_tofu$densidad_calorica)*100
 
 #calculo de la densidad nutricional
-df_soja$densidad_nutricional <-  (df_soja$FAT_100G+df_soja$CARBOHYDRATES_100G+df_soja$PROTEINS_100G)/df_soja$ENERGY_KCAL_100G*100
-df_soja$scoring_densidad_nutricional <- df_soja$densidad_nutricional/max(df_soja$densidad_nutricional)*100
+df_tofu$densidad_nutricional <-  (df_tofu$FAT_100G+df_tofu$CARBOHYDRATES_100G+df_tofu$PROTEINS_100G)/df_tofu$ENERGY_KCAL_100G*100
+df_tofu$scoring_densidad_nutricional <- df_tofu$densidad_nutricional/max(df_tofu$densidad_nutricional)*100
 
 #calculo de la relacion entre densidades
-df_soja$relacion <- df_soja$scoring_densidad_nutricional/df_soja$scoring_densidad_calorica
+df_tofu$relacion <- df_tofu$scoring_densidad_nutricional/df_tofu$scoring_densidad_calorica
 ```
 
 
 ```{r}
-cluster <- soja_kms_clusters$cluster
-df_soja <- cbind(df_soja,cluster)
-tabla_frecuencia <- table(df_soja$cluster)
+cluster <- km_clusters$cluster
+df_tofu <- cbind(df_tofu,cluster)
+tabla_frecuencia <- table(df_tofu$cluster)
 
 # Imprimir la tabla de frecuencia
 print(tabla_frecuencia)
-cluster1_soja <- subset(df_soja, df_soja$cluster == 1)
-summary(cluster1_soja)
+cluster1_tofu <- subset(df_tofu, df_tofu$cluster == 1)
+summary(cluster1_tofu)
 ```
 ```{r}
-cluster2_soja <- subset(df_soja, df_soja$cluster == 2)
-summary(cluster2_soja)
+cluster2_tofu <- subset(df_tofu, df_tofu$cluster == 2)
+summary(cluster2_tofu)
 ```
 ```{r}
-cluster3_soja <- subset(df_soja, df_soja$cluster == 3)
-summary(cluster3_soja)
+cluster3_tofu <- subset(df_tofu, df_tofu$cluster == 3)
+summary(cluster3_tofu)
 ```
 
 ```{r}
@@ -406,10 +309,10 @@ if (!require(ggplot2)) {
 set.seed(123)
 
 # Crear el gráfico de dispersión con colores personalizados y leyenda
-ggplot(df_soja[,-1], aes(df_soja$scoring_densidad_nutricional, df_soja$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+ggplot(df_tofu, aes(df_tofu$scoring_densidad_nutricional, df_tofu$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
   geom_point(size = 3) +
   scale_color_manual(values = cluster_colors) +
-  labs(color = "Cluster", title="Dispersión por cluster - soja",x = "Densidad nutricional", y = "Densidad calórica") +
+  labs(color = "Cluster", title="Dispersión por cluster - tofu",x = "Densidad nutricional", y = "Densidad calórica") +
   theme_minimal()
 
 ```

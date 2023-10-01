@@ -1,0 +1,386 @@
+---
+title: "TFM_E2_Grupo02"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2023-08-22"
+---
+
+# ###############################################################################
+# PREPARAR ENTORNO DE TRABAJO
+# ###############################################################################
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(factoextra)
+library(ggplot2)
+library(cluster)
+library(tidyverse)
+library(ggcorrplot)
+library(writexl)
+library(openxlsx)
+library(PerformanceAnalytics)
+library(corrplot)
+library(ggplot2)
+library(car)
+library(simstudy)
+library(data.table)
+library(corrr)
+library(dbscan)
+library(DMwR2)
+library(FactoMineR)
+library(factoextra)
+library(ggthemes)
+library(fmsb)
+library(SCORPIUS)
+library(scatterplot3d)
+library(dbscan)
+library(plotly)
+library(purrr)
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA FUNCIONES
+# ###############################################################################
+# ###############################################################################
+```{r}
+# Cargar funciones
+source("funciones.R")
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA DATOS
+# ###############################################################################
+# ###############################################################################
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Carga de datos
+################################################################################
+# Columnas estudio
+#"ISO3", "SUGARS_100G", "SALT_100G"
+columnas_objetivo <- c("PRODUCT_NAME","ENERGY_KCAL_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G")
+# columnas que requieren conversión
+columnas_numericas_objetivo <- c("ENERGY_KCAL_100G","FAT_100G","CARBOHYDRATES_100G","PROTEINS_100G")
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Carga de datos
+################################################################################
+
+# Seitan
+df_seitan_all_vars <- data.frame(read.csv2('seitan.csv', sep=','))
+df_seitan_after_objetivo <- dataframe_objetivo(df_seitan_all_vars, columnas_objetivo)
+
+# Tofu
+df_tofu_all_vars <- data.frame(read.csv2('tofu.csv', sep=','))
+df_tofu_after_objetivo <- dataframe_objetivo(df_tofu_all_vars, columnas_objetivo)
+
+# Soja
+df_soja_all_vars <- data.frame(read.csv2('soja.csv', sep=','))
+df_soja_after_objetivo <- dataframe_objetivo(df_soja_all_vars, columnas_objetivo)
+
+# Crear un vector con las palabras a buscar
+
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI","THE SOUP VILLAGE SESAME SOY SOUP","ORGANIC SOYBEAN FETTUCCINE", "SEITAN AUX EPICES INDIENNES", "CROC'SEITAN", "ADOBO CRIOLLO FILETES DE SEITAN")
+
+#"SEITAN AUX EPICES INDIENNES", "CROC'SEITAN", "ADOBO CRIOLLO FILETES DE SEITAN"
+```
+
+
+# ###############################################################################
+# ###############################################################################
+# seitan
+# ###############################################################################
+# ###############################################################################
+
+```{r}
+################################################################################
+# Limpiar Dataframe
+################################################################################
+df_seitan <- limpiar_dataframe(df_seitan_after_objetivo, columnas_numericas_objetivo)
+df_seitan <- filtro_negativo(df_seitan, palabras_a_eliminar)
+seitan_clean <- escalar_dataframe(df_seitan, columnas_numericas_objetivo)
+```
+
+```{r}
+str(seitan_clean)
+```
+
+
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL seitan
+# ###############################################################################
+
+```{r echo=FALSE, warning=FALSE}
+# LOF
+puntos <- 50
+seitan_lof <- LOF_dataframe(seitan_clean[, 2:5],puntos)
+
+# PCA
+seitan_pca <- PCA_dataframe(seitan_clean[, 2:5])
+
+# LOFT SCORE
+seitan_lof_score <- LOF_SCORE_dataframe(seitan_pca, seitan_lof, seitan_clean)
+
+# corte quantil
+seitan_probabilidad <- 0.95
+
+# quantiles
+seitan_quantiles_vars <- obtener_cuantiles(seitan_lof_score, seitan_probabilidad)
+
+# Ahora 'quantiles_vars' es una lista con los cuantiles
+seitan_cuantil_1 <- seitan_quantiles_vars$cuantil_0
+seitan_cuantil_2 <- seitan_quantiles_vars$cuantil_1
+
+# DATAFRAMES outliers
+
+df_seitan <- df_seitan[seitan_lof < seitan_cuantil_2,]
+df_seitan_outliers <- df_seitan[seitan_lof >= seitan_cuantil_2,]
+
+# Escalar DATAFRAME - Cuantil
+seitan_lof_score <- escalar_dataframe_CUANTIL(seitan_lof_score, seitan_cuantil_2)
+
+# Eliminar valores atipicos univariantes
+#columns_to_check_seitan <- 3:ncol(df_seitan)
+#for (column_seitan in columns_to_check_seitan) {
+#  df_seitan <- remove_outliers(df_seitan, column_seitan)
+#}
+
+# Omitir NA
+df_seitan <- na.omit(df_seitan)
+```
+
+# ###############################################################################
+# ANÁLISIS DATOS
+# ###############################################################################
+```{r}
+summary(seitan_pca)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_var_explicada_pca(seitan_pca, "seitan")
+
+```
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+summary(seitan_lof_score)
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_densidad_LOF(seitan_lof_score, "seitan")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_distribucion_OUTLIERS_LOF(seitan_lof_score, "seitan")
+```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_seitan[,2:5]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
+
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
+
+
+# ###############################################################################
+# CLUSTERS
+# ###############################################################################
+
+```{r}
+#Datos
+
+df <- df_seitan[, c(2:5, 2)]
+seitan <- df_seitan[, c(2:5, 2)]
+di=data.frame(df)
+
+df <- data.frame(seitan)
+seitan.2 <- seitan[,-5]
+product <- seitan[,5]
+
+# Normalización entre 0 y 1
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+d2f <- as.data.frame(lapply(di[, 1:4], normalize))
+rownames(d2f) <- di$Species
+
+# UNO
+cluster_colors <- c("red","#66BD63","orange")
+#cluster_colors <- c("#66BD63","red","orange")
+
+fviz_nbclust(x = d2f, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(d2f, method = "euclidean"), nstart = 50)
+```
+
+```{r}
+# Tu código existente para generar el gráfico
+library(factoextra)
+
+# Supongamos que tu gráfico generado está almacenado en una variable llamada "mi_grafico"
+mi_grafico <- fviz_nbclust(
+  x = d2f,
+  FUNcluster = kmeans,
+  method = "wss",
+  k.max = 15,
+  diss = get_dist(d2f, method = "euclidean"),
+  nstart = 50
+)
+
+# Editar el título del gráfico
+mi_grafico <- mi_grafico + ggtitle("Número de clusters óptimos - seitán")
+
+# Mostrar el gráfico con el título editado
+print(mi_grafico)
+
+```
+
+```{r}
+# Tu código existente para generar el gráfico
+library(factoextra)
+library(ggplot2)  # Añadir ggplot2 para personalizar el gráfico
+
+# Supongamos que tu gráfico generado está almacenado en una variable llamada "mi_grafico"
+mi_grafico <- fviz_nbclust(
+  x = d2f,
+  FUNcluster = kmeans,
+  method = "wss",
+  k.max = 15,
+  diss = get_dist(d2f, method = "euclidean"),
+  nstart = 50
+)
+
+# Agregar una línea vertical roja en x = 3 y editar el título
+mi_grafico <- mi_grafico +
+  geom_vline(xintercept = 3, color = "red") +
+  labs(title = "Óptimo número de clusters - Seitán")
+
+# Mostrar el gráfico actualizado
+print(mi_grafico)
+
+```
+
+```{r}
+set.seed(123)
+cluster_colors <- c("#66BD63","orange","red")
+# Ejecutar k-means
+km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
+
+# Visualizar
+fviz_cluster(object = km_clusters, data = d2f, 
+             geom = "point", ellipse.type = "euclid",
+             show.clust.cent = TRUE, star.plot = TRUE,
+             palette = cluster_colors) +
+  labs(title = "Resultados clustering K-means - soja") +
+  theme_bw() +  
+  theme(legend.position = "right")
+
+# Realizar PCA
+pca <- prcomp(d2f, scale = TRUE)
+
+# Realizar k-means en las tres primeras dimensiones de PCA
+kc <- kmeans(pca$x[, 1:3], 3)
+
+# Visualizar
+fviz_pca_biplot(pca, label = "var", habillage = as.factor(km_clusters$cluster), palette = cluster_colors) +
+  labs(color = NULL) + 
+  ggtitle("PCA Biplot con clustering - Productos de seitan") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+
+
+```
+
+
+
+
+```{r, echo = FALSE, warning = FALSE}
+df_seitan_min_max <- centroides_clustering(km_clusters)
+df_seitan_min_max
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart(df_seitan_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart_clusters(df_seitan_min_max, c("1", "2", "3"), 3)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+top10_clusters(df_seitan, 3)
+```
+```{r}
+#calculo de la densidad calorica
+df_seitan$densidad_calorica <- df_seitan$ENERGY_KCAL_100 / 100
+df_seitan$scoring_densidad_calorica <- df_seitan$densidad_calorica/max(df_seitan$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_seitan$densidad_nutricional <-  (df_seitan$FAT_100G+df_seitan$CARBOHYDRATES_100G+df_seitan$PROTEINS_100G)/df_seitan$ENERGY_KCAL_100G*100
+df_seitan$scoring_densidad_nutricional <- df_seitan$densidad_nutricional/max(df_seitan$densidad_nutricional)*100
+
+#calculo de la relacion entre densidades
+df_seitan$relacion <- df_seitan$scoring_densidad_nutricional/df_seitan$scoring_densidad_calorica
+```
+
+
+```{r}
+cluster <- km_clusters$cluster
+df_seitan <- cbind(df_seitan,cluster)
+tabla_frecuencia <- table(df_seitan$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_seitan <- subset(df_seitan, df_seitan$cluster == 1)
+summary(cluster1_seitan)
+```
+```{r}
+cluster2_seitan <- subset(df_seitan, df_seitan$cluster == 2)
+summary(cluster2_seitan)
+```
+```{r}
+cluster3_seitan <- subset(df_seitan, df_seitan$cluster == 3)
+summary(cluster3_seitan)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_seitan, aes(df_seitan$scoring_densidad_nutricional, df_seitan$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster - seitan",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```
