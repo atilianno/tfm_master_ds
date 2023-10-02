@@ -1,0 +1,18 @@
+{
+  "ENERGY_100G": {
+    "MAX": 420.0,
+    "MIN": 31.0
+  },
+  "FAT_100G": {
+    "MAX": 40.0,
+    "MIN": 0.1
+  },
+  "CARBOHYDRATES_100G": {
+    "MAX": 54.0,
+    "MIN": 0.0
+  },
+  "PROTEINS_100G": {
+    "MAX": 31.0,
+    "MIN": 0.0
+  }
+}

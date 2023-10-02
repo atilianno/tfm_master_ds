@@ -1,0 +1,17 @@
+{
+  "seitan": {
+    "red" : "Este tipo de seitán tiene una alta densidad calórica y una densidad nutricional moderada. Proporciona una cantidad significativa de proteínas, pero también es rico en carbohidratos y grasas. La alta densidad calórica sugiere que debe consumirse con moderación, especialmente si se busca mantener una ingesta calórica equilibrada.",
+    "green" : "El seitán en este tipo tiene una densidad calórica más baja y la densidad nutricional más alta de los tres tipos. Proporciona una cantidad significativa de proteínas y grasas, pero es relativamente bajo en carbohidratos. La alta densidad nutricional sugiere que este tipo de seitán es una excelente fuente de nutrientes por cada caloría consumida.",
+    "red" : "La variedad de seitán en este tipo tiene una densidad calórica moderada y una densidad nutricional razonable. Es rica en proteínas pero también contiene carbohidratos y grasas. Aunque su densidad calórica es moderada, su densidad nutricional es adecuada, lo que lo convierte en una opción equilibrada en términos de nutrientes y calorías."
+  },
+  "tofu": {
+    "green" : "Este tipo de tofu tiene una densidad calórica relativamente baja y una densidad nutricional alta. Proporciona una cantidad moderada de proteínas y grasas, pero también contiene carbohidratos. Su alta densidad nutricional sugiere que aporta una cantidad apreciable de nutrientes por cada caloría consumida.",
+    "red" : "El tofu en este tipo tiene una densidad calórica moderada y una densidad nutricional decente. Es especialmente rico en proteínas y grasas, pero es bajo en carbohidratos. La densidad nutricional es buena pero no excepcionalmente alta.",
+    "red" : "Este tipo de tofu tiene la densidad calórica más alta y una densidad nutricional moderada. Proporciona una cantidad significativa de proteínas y grasas, junto con carbohidratos. La densidad calórica sugiere que debe consumirse con moderación, pero su densidad nutricional sigue siendo razonable."
+  },
+  "soja": {
+    "green" : "La soja en este tipo tiene una baja densidad calórica y una densidad nutricional extremadamente alta. Aporta una cantidad significativa de proteínas y grasas, pero es relativamente baja en carbohidratos. La alta densidad nutricional sugiere que este tipo de soja es una fuente excepcional de nutrientes por cada caloría consumida.",
+    "red" : "El tipo de soja aquí tiene una alta densidad calórica y una densidad nutricional razonable. Es rico en proteínas y grasas, así como carbohidratos. Aunque su densidad calórica es alta, su densidad nutricional sigue siendo adecuada.",
+    "red" : "La variedad de soja en este tipo tiene una alta densidad calórica y una densidad nutricional alta. Proporciona una cantidad moderada de proteínas y grasas, pero es extremadamente rica en carbohidratos. A pesar de su alta densidad calórica, su densidad nutricional sigue siendo razonable."
+  }
+}
