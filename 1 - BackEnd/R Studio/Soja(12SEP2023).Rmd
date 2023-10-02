@@ -1,0 +1,321 @@
+---
+title: "TFM_E2_Grupo02"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2023-08-22"
+---
+
+# ###############################################################################
+# PREPARAR ENTORNO DE TRABAJO
+# ###############################################################################
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(factoextra)
+library(ggplot2)
+library(cluster)
+library(tidyverse)
+library(ggcorrplot)
+library(writexl)
+library(openxlsx)
+library(PerformanceAnalytics)
+library(corrplot)
+library(ggplot2)
+library(car)
+library(simstudy)
+library(data.table)
+library(corrr)
+library(dbscan)
+library(DMwR2)
+library(FactoMineR)
+library(factoextra)
+library(ggthemes)
+library(fmsb)
+library(SCORPIUS)
+library(scatterplot3d)
+library(dbscan)
+library(plotly)
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA FUNCIONES
+# ###############################################################################
+# ###############################################################################
+```{r}
+# Cargar funciones
+source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/funciones.R")
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA DATOS
+# ###############################################################################
+# ###############################################################################
+
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Carga de datos
+################################################################################
+df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+
+
+# Crear un vector con las palabras a buscar
+
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI","THE SOUP VILLAGE SESAME SOY SOUP","ORGANIC SOYBEAN FETTUCCINE","SOY PLUS SIN LACTOSA VAINILLA","SOYLENT","SOYGURT","SOYGO","SOY GURT BLABAR","EQUILIBRIO-SPECIALITA DI SOIA","LE SOYEUX - NOUGAT BLANC EXTRA MIEL","SOY GURT","FORMULA","VANIGLIA","CAPPUCCINO","PANCAKE","BUTTER","KARAMELISOITU","PAN BAULETTO")
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+```
+
+
+# ###############################################################################
+# ###############################################################################
+# soja
+# ###############################################################################
+# ###############################################################################
+
+```{r}
+df_soja <- limpiar_dataframe(df_soja_all_vars)
+df_soja <- filtro_negativo(df_soja, palabras_a_eliminar)
+df_soja <- na.omit(df_soja)
+df_soja <- df_soja[,-7:-8]
+soja_clean <- escalar_dataframe(df_soja)
+```
+
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL soja
+# ###############################################################################
+
+```{r echo=FALSE, warning=FALSE}
+# LOF
+puntos <- 50
+soja_lof <- LOF_dataframe(soja_clean,puntos)
+
+# PCA
+soja_pca <- PCA_dataframe(soja_clean)
+
+# LOFT SCORE
+soja_lof_score <- LOF_SCORE_dataframe(soja_pca, soja_lof, soja_clean)
+
+# corte quantil
+soja_probabilidad <- 0.9
+
+# quantiles
+soja_quantiles_vars <- obtener_cuantiles(soja_lof_score, soja_probabilidad)
+
+# Ahora 'quantiles_vars' es una lista con los cuantiles
+soja_cuantil_1 <- soja_quantiles_vars$cuantil_0
+soja_cuantil_2 <- soja_quantiles_vars$cuantil_1
+
+# DATAFRAMES outliers
+
+df_soja <- df_soja[soja_lof < soja_cuantil_2,]
+df_soja_outliers <- df_soja[soja_lof >= soja_cuantil_2,]
+
+# Escalar DATAFRAME - Cuantil
+soja_lof_score <- escalar_dataframe_CUANTIL(soja_lof_score, soja_cuantil_2)
+
+# Eliminar valores atipicos univariantes
+#columns_to_check_soja <- 3:ncol(df_soja)
+#for (column_soja in columns_to_check_soja) {
+#  df_soja <- remove_outliers(df_soja, column_soja)
+#}
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+# Omitir NA
+#df_soja <- na.omit(df_soja)
+```
+
+# ###############################################################################
+# ANÁLISIS DATOS
+# ###############################################################################
+```{r}
+summary(soja_pca)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_var_explicada_pca(soja_pca, "soja")
+
+```
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_LOF(soja_lof_score, "soja")
+```
+```{r}
+summary(soja_lof_score)
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_densidad_LOF(soja_lof_score, "soja")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_distribucion_OUTLIERS_LOF(soja_lof_score, "soja")
+```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_soja[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
+
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
+
+
+# ###############################################################################
+# CLUSTERS
+# ###############################################################################
+
+```{r}
+
+
+#Datos
+
+df <- df_soja[, c(3:6, 2)]
+soja <- df_soja[, c(3:6, 2)]
+di=data.frame(df)
+
+df <- data.frame(soja)
+soja.2 <- soja[,-5]
+product <- soja[,5]
+
+# Normalización entre 0 y 1
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+d2f <- as.data.frame(lapply(di[, 1:4], normalize))
+rownames(d2f) <- di$Species
+
+# UNO
+cluster_colors <- c("red","#66BD63","orange")
+
+fviz_nbclust(x = d2f, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(d2f, method = "euclidean"), nstart = 50)
+
+# DOS
+
+#set.seed(123)
+km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
+fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize=0.5, outlier.color="darkred", geom = "point",
+             palette = cluster_colors) +
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +  theme(legend.position = "right")
+
+
+# TRES
+require(cluster)
+pam.res <- pam(d2f, 3)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE,palette = cluster_colors)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+
+
+# CUATRO
+
+# PCA
+pca <- prcomp(soja[,-5], scale=TRUE)
+df.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = cluster_colors) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill ="white"))
+
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+df_soja_min_max <- centroides_clustering(km_clusters)
+df_soja_min_max
+```
+
+```{r, echo = FALSE, warning = FALSE}
+#set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart(df_soja_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+#set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), 3)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+top10_clusters(df_soja, 3)
+```
+```{r}
+#calculo de la densidad calorica
+df_soja$densidad_calorica <- df_soja$ENERGY_KCAL_100 / 100
+df_soja$scoring_densidad_calorica <- df_soja$densidad_calorica/max(df_soja$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_soja$densidad_nutricional <-  (df_soja$FAT_100G+df_soja$CARBOHYDRATES_100G+df_soja$PROTEINS_100G)/df_soja$ENERGY_KCAL_100G*100
+df_soja$scoring_densidad_nutricional <- df_soja$densidad_nutricional/max(df_soja$densidad_nutricional)*100
+
+#calculo de la relacion entre densidades
+df_soja$relacion <- df_soja$scoring_densidad_nutricional/df_soja$scoring_densidad_calorica
+```
+
+
+```{r}
+cluster <- km_clusters$cluster
+df_soja <- cbind(df_soja,cluster)
+tabla_frecuencia <- table(df_soja$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_soja <- subset(df_soja, df_soja$cluster == 1)
+summary(cluster1_soja)
+```
+```{r}
+cluster2_soja <- subset(df_soja, df_soja$cluster == 2)
+summary(cluster2_soja)
+```
+```{r}
+cluster3_soja <- subset(df_soja, df_soja$cluster == 3)
+summary(cluster3_soja)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+#set.seed(123)
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_soja, aes(df_soja$scoring_densidad_nutricional, df_soja$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster - soja",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```

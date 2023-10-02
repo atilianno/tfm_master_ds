@@ -1,0 +1,318 @@
+---
+title: "TFM_E2_Grupo02"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2023-08-22"
+---
+
+# ###############################################################################
+# PREPARAR ENTORNO DE TRABAJO
+# ###############################################################################
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(factoextra)
+library(ggplot2)
+library(cluster)
+library(tidyverse)
+library(ggcorrplot)
+library(writexl)
+library(openxlsx)
+library(PerformanceAnalytics)
+library(corrplot)
+library(ggplot2)
+library(car)
+library(simstudy)
+library(data.table)
+library(corrr)
+library(dbscan)
+library(DMwR2)
+library(FactoMineR)
+library(factoextra)
+library(ggthemes)
+library(fmsb)
+library(SCORPIUS)
+library(scatterplot3d)
+library(dbscan)
+library(plotly)
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA FUNCIONES
+# ###############################################################################
+# ###############################################################################
+```{r}
+# Cargar funciones
+source("C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/R Studio/funciones.R")
+```
+
+# ###############################################################################
+# ###############################################################################
+# CARGA DATOS
+# ###############################################################################
+# ###############################################################################
+
+
+```{r, echo = FALSE, warning = FALSE}
+################################################################################
+# Carga de datos
+################################################################################
+df_seitan_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/seitan.csv', sep=','))
+df_tofu_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/tofu.csv', sep=','))
+df_soja_all_vars <- data.frame(read.csv2('C:/Users/linfante/OneDrive/Documentos/MasterBigData/TFM/tfm_master_ds/1 - BackEnd/Datos/soja.csv', sep=','))
+
+# Crear un vector con las palabras a buscar
+
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI","THE SOUP VILLAGE SESAME SOY SOUP","ORGANIC SOYBEAN FETTUCCINE")
+
+################################################################################
+# Limpiar Dataframe
+################################################################################
+```
+
+
+# ###############################################################################
+# ###############################################################################
+# seitan
+# ###############################################################################
+# ###############################################################################
+
+```{r}
+df_tofu <- limpiar_dataframe(df_tofu_all_vars)
+df_tofu <- filtro_negativo(df_tofu, palabras_a_eliminar)
+df_tofu <- na.omit(df_tofu)
+df_tofu <- subset(df_tofu, !(ISO3 == "CHE" & PRODUCT_NAME == "TOFU"))
+df_tofu <- df_tofu[,-7:-8]
+tofu_clean <- escalar_dataframe(df_tofu)
+```
+
+# ###############################################################################
+# ANÁLISIS EXPLORATORIO DE LOS DATOS DEL tofu
+# ###############################################################################
+
+```{r echo=FALSE, warning=FALSE}
+# LOF
+puntos <- 50
+tofu_lof <- LOF_dataframe(tofu_clean,puntos)
+
+# PCA
+tofu_pca <- PCA_dataframe(tofu_clean)
+
+# LOFT SCORE
+tofu_lof_score <- LOF_SCORE_dataframe(tofu_pca, tofu_lof, tofu_clean)
+
+# corte quantil
+tofu_probabilidad <- 0.9
+
+# quantiles
+tofu_quantiles_vars <- obtener_cuantiles(tofu_lof_score, tofu_probabilidad)
+
+# Ahora 'quantiles_vars' es una lista con los cuantiles
+tofu_cuantil_1 <- tofu_quantiles_vars$cuantil_0
+tofu_cuantil_2 <- tofu_quantiles_vars$cuantil_1
+
+# DATAFRAMES outliers
+
+df_tofu <- df_tofu[tofu_lof < tofu_cuantil_2,]
+df_tofu_outliers <- df_tofu[tofu_lof >= tofu_cuantil_2,]
+
+# Escalar DATAFRAME - Cuantil
+tofu_lof_score <- escalar_dataframe_CUANTIL(tofu_lof_score, tofu_cuantil_2)
+
+# Eliminar valores atipicos univariantes
+#columns_to_check_tofu <- 3:ncol(df_tofu)
+#for (column_tofu in columns_to_check_tofu) {
+#  df_tofu <- remove_outliers(df_tofu, column_tofu)
+#}
+
+# Omitir NA
+df_tofu <- na.omit(df_tofu)
+```
+
+# ###############################################################################
+# ANÁLISIS DATOS
+# ###############################################################################
+```{r}
+summary(tofu_pca)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_var_explicada_pca(tofu_pca, "tofu")
+
+```
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_LOF(tofu_lof_score, "tofu")
+```
+```{r}
+summary(tofu_lof_score)
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+graf_distribucion_densidad_LOF(tofu_lof_score, "tofu")
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+graf_distribucion_OUTLIERS_LOF(tofu_lof_score, "tofu")
+```
+```{r}
+par(cex.lab = 1.5, cex.main = 1.2)
+Data <- scale(df_tofu[,3:6]) # notice I am scaling the vectors)
+clustergram(Data, k.range = 2:8, line.width = 0.001) # notice how I am using line.width.  Play with it on your problem, according to the scale of Y.
+
+```
+El hecho de pertenecer a un cluster o a otro será arbitrario, no dependerá de la distancia que existe entre un punto y otro. La distancia es homogénea. Genera una reclasificación constante de una lado hacia otro.
+Lo que más nos interesa es encontrar grupos de productos que sean más eficientes, que tengan una composición que sea más sana.
+¿qué tipo de producto puedo encontrar en el mercado que pueda ofrecer un mayor aporte de proteína?
+
+
+# ###############################################################################
+# CLUSTERS
+# ###############################################################################
+
+```{r}
+
+
+#Datos
+
+df <- df_tofu[, c(3:6, 2)]
+tofu <- df_tofu[, c(3:6, 2)]
+di=data.frame(df)
+
+df <- data.frame(tofu)
+tofu.2 <- tofu[,-5]
+product <- tofu[,5]
+
+# Normalización entre 0 y 1
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+d2f <- as.data.frame(lapply(di[, 1:4], normalize))
+#rownames(d2f) <- di$Species
+
+# UNO
+cluster_colors <- c("red","#66BD63","orange")
+
+fviz_nbclust(x = d2f, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(d2f, method = "euclidean"), nstart = 50)
+
+# DOS
+
+#set.seed(123)
+km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
+fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
+             pointsize=0.5, outlier.color="darkred", geom = "point",
+             palette = cluster_colors) +
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +  theme(legend.position = "right")
+
+
+# TRES
+require(cluster)
+pam.res <- pam(d2f, 3)
+# Visualización
+fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
+             show.clust.cent = TRUE,star.plot = TRUE,palette = cluster_colors)+
+  labs(title = "Resultados clustering K-means")+ theme_bw()
+
+
+# CUATRO
+
+# PCA
+pca <- prcomp(tofu[,-5], scale=TRUE)
+df.pca <- pca$x
+# Cluster over the three first PCA dimensions
+kc <- kmeans(df.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = cluster_colors) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill ="white"))
+
+
+```
+
+
+```{r, echo = FALSE, warning = FALSE}
+df_tofu_min_max <- centroides_clustering(km_clusters)
+df_tofu_min_max
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart(df_tofu_min_max)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+set.seed(123)
+colores <- c("red","#66BD63","orange")
+graf_radarchart_clusters(df_tofu_min_max, c("1", "2", "3"), 3)
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Visualizar los productos más cercanos al centroide que representan cada cluster top10
+top10_clusters(df_tofu, 3)
+```
+```{r}
+#calculo de la densidad calorica
+df_tofu$densidad_calorica <- df_tofu$ENERGY_KCAL_100 / 100
+df_tofu$scoring_densidad_calorica <- df_tofu$densidad_calorica/max(df_tofu$densidad_calorica)*100
+
+#calculo de la densidad nutricional
+df_tofu$densidad_nutricional <-  (df_tofu$FAT_100G+df_tofu$CARBOHYDRATES_100G+df_tofu$PROTEINS_100G)/df_tofu$ENERGY_KCAL_100G*100
+df_tofu$scoring_densidad_nutricional <- df_tofu$densidad_nutricional/max(df_tofu$densidad_nutricional)*100
+
+#calculo de la relacion entre densidades
+df_tofu$relacion <- df_tofu$scoring_densidad_nutricional/df_tofu$scoring_densidad_calorica
+```
+
+
+```{r}
+cluster <- km_clusters$cluster
+df_tofu <- cbind(df_tofu,cluster)
+tabla_frecuencia <- table(df_tofu$cluster)
+
+# Imprimir la tabla de frecuencia
+print(tabla_frecuencia)
+cluster1_tofu <- subset(df_tofu, df_tofu$cluster == 1)
+summary(cluster1_tofu)
+```
+```{r}
+cluster2_tofu <- subset(df_tofu, df_tofu$cluster == 2)
+summary(cluster2_tofu)
+```
+```{r}
+cluster3_tofu <- subset(df_tofu, df_tofu$cluster == 3)
+summary(cluster3_tofu)
+```
+
+```{r}
+# Cargar la biblioteca ggplot2 si no está cargada
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+set.seed(123)
+
+# Crear el gráfico de dispersión con colores personalizados y leyenda
+ggplot(df_tofu, aes(df_tofu$scoring_densidad_nutricional, df_tofu$scoring_densidad_calorica, color = factor(cluster),shape = factor(cluster))) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cluster_colors) +
+  labs(color = "Cluster", title="Dispersión por cluster - tofu",x = "Densidad nutricional", y = "Densidad calórica") +
+  theme_minimal()
+
+```

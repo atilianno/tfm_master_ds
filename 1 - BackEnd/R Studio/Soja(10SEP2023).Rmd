@@ -278,81 +278,73 @@ dispersion_3d(df_soja_normalizado$PROTEINS_100G, df_soja_normalizado$FAT_100G, d
 # CLUSTERS
 # ###############################################################################
 
-```{r, echo = FALSE, warning = FALSE}
-# total de cluster óptimos
-graf_cluster_optimos(df_soja_normalizado)
-```
-
-
-```{r, echo = FALSE, warning = FALSE}
-
-# Número de clusters
-n_clusters_soja <- 3
-# Definir una paleta de colores personalizada
-set.seed(123)
-cluster_colors <- c("#66BD63","red","orange")
-soja_kms_clusters <- clustering_kmeans(df_soja_normalizado, n_clusters_soja)
-graf_clustering_kmeans(df_soja_normalizado, soja_kms_clusters, "soja")
-```
-```{r, echo = FALSE, warning = FALSE}
-soja_euclidean_clusters <- clustering_euclidean(df_soja_normalizado, n_clusters_soja)
-graf_clustering_euclidean(df_soja_normalizado, n_clusters_soja, "soja", soja_euclidean_clusters)
-```
-
-```{r, echo = FALSE, warning = FALSE}
-clustering_kmeans_SUPERPUESTO(df_soja_normalizado, n_clusters_soja, "soja")
-```
-
-```{r, echo = FALSE, warning = FALSE}
-set.seed(123)
-cluster_colors <- c("red","#66BD63","orange")
-#cluster_colors <- c("black","black","black")
-# Biplot PCA y K-Means para medir representatividad
-PCA_CLUSTER_KMEANS(df_soja_normalizado, n_clusters_soja)
-```
 ```{r}
-#uno
-fviz_nbclust(x = df_soja_normalizado, FUNcluster = kmeans, method = "wss", k.max = 15, 
-             diss = get_dist(df_soja_normalizado, method = "euclidean"), nstart = 50)
-#dos
-d2f=data.frame(df_soja_normalizado)
+#Datos
+
+df <- df_soja[, c(3:6, 2)]
+soja <- df_soja[, c(3:6, 2)]
+di=data.frame(df)
+
+df <- data.frame(soja)
+soja.2 <- soja[,-5]
+product <- soja[,5]
+
+# Normalización entre 0 y 1
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+d2f <- as.data.frame(lapply(di[, 1:4], normalize))
+rownames(d2f) <- di$Species
+
+# UNO
+cluster_colors <- c("red","#66BD63","orange")
+
+fviz_nbclust(x = d2f, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(d2f, method = "euclidean"), nstart = 50)
+
+# DOS
+
+set.seed(123)
 km_clusters <- kmeans(x = d2f, centers = 3, nstart = 50)
-# Las funciones del paquete factoextra emplean el nombre de las filas del
-# dataframe que contiene los datos como identificador de las observaciones.
-# Esto permite añadir labels a los gráficos.
 fviz_cluster(object = km_clusters, data = d2f, show.clust.cent = TRUE,
              ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
-             pointsize=0.5,outlier.color="darkred", geom = "point",
+             pointsize=0.5, outlier.color="darkred", geom = "point",
              palette = cluster_colors) +
-  theme_bw() +
-  theme(legend.position = "right")+
-  labs(title = "Resultados clustering K-means")
-#tres
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +  theme(legend.position = "right")
+
+
+# TRES
 require(cluster)
 pam.res <- pam(d2f, 3)
 # Visualización
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE,palette = cluster_colors)+
   labs(title = "Resultados clustering K-means")+ theme_bw()
-#cuatro
-data(iris)
+
+
+# CUATRO
+
 # PCA
-pca <- prcomp(df_soja_normalizado)
-df_soja_normalizado.pca <- pca$x
+pca <- prcomp(soja[,-5], scale=TRUE)
+df.pca <- pca$x
 # Cluster over the three first PCA dimensions
-kc <- kmeans(df_soja_normalizado.pca[,1:3], 3)
-  fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = cluster_colors) +
-    labs(color=NULL) + ggtitle("") +
-    theme(text = element_text(size = 12),
-          panel.background = element_blank(), 
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.line = element_line(colour = "black"),
-          legend.key = element_rect(fill = "white"))
+kc <- kmeans(df.pca[,1:3], 3)
+fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster),palette = cluster_colors) +
+  labs(color=NULL) + ggtitle("") +
+  theme(text = element_text(size = 15),
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.key = element_rect(fill = "white"))
+
+
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
-df_soja_min_max <- centroides_clustering(soja_kms_clusters)
+df_soja_min_max <- centroides_clustering(km_clusters)
 df_soja_min_max
 ```
 
@@ -370,7 +362,7 @@ graf_radarchart_clusters(df_soja_min_max, c("1", "2", "3"), n_clusters_soja)
 
 ```{r, echo = FALSE, warning = FALSE}
 # Visualizar los productos más cercanos al centroide que representan cada cluster top10
-top10_clusters(df_soja, n_clusters_soja)
+top10_clusters(df_soja, 3)
 ```
 ```{r}
 #calculo de la densidad calorica

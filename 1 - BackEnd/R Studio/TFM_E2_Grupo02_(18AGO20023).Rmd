@@ -99,8 +99,8 @@ print(table(df_soja$ISO3))
 ```{r}
 # Aplicar filtros negativos
 
-# Crear un vector con las palabras a buscar
-palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAIN SOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI")
+
+palabras_a_eliminar <- c("SALSA DE SOJA","SAUCE SOJA", "SAUCE SOJA","BEBIDA DE SOJA", "YAOURT SOJA","YOGURT DE SOJA","CHOCOLAT","ARROZ Y SOJA","LECHE","MOUSSE","MILK","ACEITE","DESSERT","PAN SOJA","BOISSON SOJA","GLACE","ML","SAUCE DE SOJA","SAUCE","SALSA","BIBEDA DE SOJA","LAIT SOJA","VIVESOY SOJA","LAIT DE SOJA","YAOURT","POSTRE","MUESLI","YOGUR","BEBIDA","MARGARINA","VINAIGRETTE","DRINK","SAUCE","BATIDO","LAIT","MAYONNAISE","CAFE","VANILLE","NATA","YOGURT","LACTOVISOY","ALIMENTO DE SOYA","ALIMENTO LIQUIDO DE SOYA","BEVANDA","SWEET SOY","VANILLE","VANILLA","UNSWEETENED","SWEETENED","STRAWBERRY","PROTEIN ISOLATE","SOYA CALCIUM","BLUEBERRY","BEVERAGE","BARISTA","SOYA A TARTINER","JUGO","PROTEIN POWDER","PROTEIN ISOLATE","CACAO","CALCIUM","CALCIO","NUTRI SOJA","SOIA BIANCO CREMOSO","LECITINA","LECITHINE","LATTE","HARICOTS","GERME","GELATO","GATEAU","FROMAGE FRAIS","INFUSION","SOYBEAN PASTE","MIXBEANS","MISO SOUP","SOYBEANS","PATE DE SOJA","PLAINSOYA","PETIT’SOIF","SOYBEANS","FRAMBOISE","MANGO","DOUCEUR","SOJABOHNENKEIMLINGE","KEIMLINGE","MANGUE","PECHE","MANZANA","VICHYSSOISE","CHOCOAVENA","AVENA","MANI","SEMILLAS","PAN RALLADO","GARBANZOS","RAGU","CHILI","THE SOUP VILLAGE SESAME SOY SOUP","ORGANIC SOYBEAN FETTUCCINE","SOY PLUS SIN LACTOSA VAINILLA","SOYLENT","SOYGURT","SOYGO","SOY GURT BLABAR","EQUILIBRIO-SPECIALITA DI SOIA","LE SOYEUX - NOUGAT BLANC EXTRA MIEL","SOY GURT","FORMULA","VANIGLIA","CAPPUCCINO","PANCAKE","BUTTER","KARAMELISOITU","PAN BAULETTO")
 
 # Crear una función que verifica si alguna de las palabras está presente en el texto
 verificar_palabras <- function(texto, palabras) {
@@ -155,7 +155,7 @@ seitan_clean <- df_seitan %>%
 str(seitan_clean)
 
 seitan_clean <- as.data.frame(scale(df_seitan[,-1:-2]))
-seitan_lof <- lof(seitan_clean, minPts = 25)
+seitan_lof <- lof(seitan_clean, minPts = 40)
 
 # PCA y use las dos primeras dimensiones del PCA
 seitan_pca <- PCA(seitan_clean, scale.unit = F, ncp = 6, graph = F)
@@ -198,7 +198,7 @@ quantile(seitan_b$lof_score, probs = c(0, 0.9))
 
 ```{r}
 seitan_b <- seitan_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.5753956, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.8334693, 1, 0))
 
 seitan_lof_visual_b <- ggplot(seitan_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -213,8 +213,8 @@ nooutliers <- seitan_b[seitan_b$outlier==0,]
 ```
 
 ```{r}
-df_seitan <- df_seitan[seitan_lof < 1.3319969,]
-df_seitan_outliers <- df_seitan[seitan_lof >= 1.3319969,]
+df_seitan <- df_seitan[seitan_lof < 1.8334693,]
+df_seitan_outliers <- df_seitan[seitan_lof >= 1.8334693,]
 ```
 
 # Eliminar valores atipicos univariantes
@@ -852,13 +852,13 @@ soja_b %>%
 
 
 ```{r}
-quantile(soja_b$lof_score, probs = c(0, 0.8))
+quantile(soja_b$lof_score, probs = c(0, 0.9))
 
 ```
 
 ```{r}
 soja_b <- soja_b %>% 
-  mutate(outlier = ifelse(lof_score > 1.485425, 1, 0))
+  mutate(outlier = ifelse(lof_score > 1.7592718, 1, 0))
 
 soja_lof_visual_b <- ggplot(soja_b, aes(x=Dim.1 ,y=Dim.2, color=outlier)) + 
     geom_point() +
@@ -875,8 +875,8 @@ nooutliers <- soja_b[soja_b$outlier==0,]
 ```
 
 ```{r}
-df_soja <- df_soja[soja_lof < 1.485425,]
-df_soja_outliers <- df_soja[soja_lof >= 1.485425,]
+df_soja <- df_soja[soja_lof < 1.7592718,]
+df_soja_outliers <- df_soja[soja_lof >= 1.7592718,]
 
 ```
 
@@ -945,7 +945,7 @@ elbow <- fviz_nbclust(x = s_soja, FUNcluster = kmeans, method = "wss", k.max = 1
 print(elbow)
 
 set.seed(123)
-km_clusters <- kmeans(x = s_soja, centers = 4, nstart = 50)
+km_clusters <- kmeans(x = s_soja, centers = 3, nstart = 50)
 
 fviz_cluster(object = km_clusters, data = s_soja, show.clust.cent = TRUE,
              ellipse.type = "euclid", star.plot = TRUE, repel = TRUE,
@@ -965,7 +965,7 @@ fviz_dend(x = hc_euclidea_av, k = 4, cex = 0.5,
   labs(title = "Herarchical clustering Soja",
        subtitle = "Distancia euclidea, Average, k=4")
 
-pam.res <- pam(s_soja, 4)
+pam.res <- pam(s_soja, 3)
 # Visualización
 fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
              show.clust.cent = TRUE,star.plot = TRUE)+
@@ -979,7 +979,7 @@ fviz_cluster(pam.res, geom = "point", ellipse.type = "norm",
 pca <- prcomp(df_soja[,-1:-2], scale=TRUE)
 df_soja.pca <- pca$x
 # Cluster over the three first PCA dimensions
-kc <- kmeans(df_soja.pca[,1:3], 4)
+kc <- kmeans(df_soja.pca[,1:3], 3)
 fviz_pca_biplot(pca, label="var", habillage=as.factor(kc$cluster)) +
   labs(color=NULL) + ggtitle("") +
   theme(text = element_text(size = 15),
